@@ -1,0 +1,24 @@
+--- Starting Pricing Engine Verification ---
+
+Test 1: Baseline (Alu, Simple Cube)
+Total: 30867 DA
+Breakdown: Mat=27000, Machining=1867, Setup=2000
+Details: Time=28min, Complexity=x1.2
+-----------------------------------
+Test 2: Material Impact (Steel, Simple Cube)
+Total: 58867 DA
+Breakdown: Mat=54000, Machining=2867
+Details: Time=43min (Expected > Alu), Machinability=2.5
+RESULT: Steel is 90.7% more expensive than Alu.
+-----------------------------------
+Test 3: Complexity Impact (Alu, Complex Part)
+Total: 37378 DA
+Breakdown: Mat=27000 (Same), Machining=8378
+Details: Time=126min, Complexity=x2.6
+RESULT: Complex part is 21.1% more expensive than Simple part.
+-----------------------------------
+Test 4: Quantity Discount (10x Alu, Simple)
+Unit Price: 27613 DA (vs 30867 DA for 1)
+Total Batch: 276130 DA
+Setup per part: 200 DA (vs 2000 DA)
+-----------------------------------
