@@ -18,9 +18,9 @@ export interface UserProfile {
  */
 export function getRedirectByRole(role: UserRole): string {
     const roleRedirects: Record<UserRole, string> = {
-        client: '/client/dashboard',
-        partner: '/partner/dashboard',
-        admin: '/admin/dashboard',
+        client: '/client',
+        partner: '/partner',
+        admin: '/admin',
     };
 
     return roleRedirects[role] || '/';

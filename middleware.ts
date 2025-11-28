@@ -63,9 +63,9 @@ export async function middleware(request: NextRequest) {
 
         const role = profile?.role || 'client'
         const redirectMap: Record<string, string> = {
-            client: '/client/dashboard',
-            partner: '/partner/dashboard',
-            admin: '/admin/dashboard',
+            client: '/client',
+            partner: '/partner',
+            admin: '/admin',
         }
 
         return NextResponse.redirect(new URL(redirectMap[role], request.url))
@@ -88,16 +88,16 @@ export async function middleware(request: NextRequest) {
 
         // Check if user is trying to access wrong dashboard
         if (path.startsWith('/client') && role !== 'client') {
-            return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url))
+            return NextResponse.redirect(new URL(`/${role}`, request.url))
         }
 
         if (path.startsWith('/partner') && role !== 'partner') {
-            return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url))
+            return NextResponse.redirect(new URL(`/${role}`, request.url))
         }
 
         // Only admin can access /admin
         if (path.startsWith('/admin') && role !== 'admin') {
-            return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url))
+            return NextResponse.redirect(new URL(`/${role}`, request.url))
         }
     }
 
