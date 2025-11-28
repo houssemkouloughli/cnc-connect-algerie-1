@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowLeft, RotateCcw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { GeometryAnalyzer } from '@/lib/3d/core/GeometryAnalyzer';
+import { getSTLWorker } from '@/lib/3d/workers/WorkerManager';
 import type { GeometryAnalysis } from '@/lib/3d/core/types';
 
 interface Viewer3DProps {
@@ -14,7 +13,7 @@ interface Viewer3DProps {
     geometryData: any;
     onContinue: () => void;
     onBack: () => void;
-    onAnalysis Complete ?: (analysis: GeometryAnalysis) => void;
+    onAnalysisComplete?: (analysis: GeometryAnalysis) => void;
 }
 
 export default function Viewer3D({
@@ -27,7 +26,9 @@ export default function Viewer3D({
 }: Viewer3DProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadingProgress, setLoadingProgress] = useState(0);
     const [analysis, setAnalysis] = useState<GeometryAnalysis | null>(null);
+    const [useWorker] = useState(true); // Toggle for testing
 
     useEffect(() => {
         if (!containerRef.current || !fileUrl) return;
@@ -72,78 +73,126 @@ export default function Viewer3D({
         const gridHelper = new THREE.GridHelper(10, 10, 0x94a3b8, 0xe2e8f0);
         scene.add(gridHelper);
 
-        // Load STL File
-        const loader = new STLLoader();
-        setIsLoading(true);
+        // Load STL using Worker
+        const loadSTL = async () => {
+            setIsLoading(true);
+            setLoadingProgress(0);
 
-        loader.load(
-            fileUrl,
-            (geometry) => {
-                try {
-                    // ANALYZE GEOMETRY FIRST
-                    const geometryAnalysis = GeometryAnalyzer.analyze(geometry);
-                    console.log('📊 Geometry Analysis:', geometryAnalysis);
-                    setAnalysis(geometryAnalysis);
+            try {
+                if (useWorker) {
+                    // Use Web Worker (non-blocking)
+                    const worker = getSTLWorker();
+                    const startTime = performance.now();
 
-                    if (onAnalysisComplete) {
-                        onAnalysisComplete(geometryAnalysis);
-                    }
-
-                    // Material
-                    const material = new THREE.MeshPhongMaterial({
-                        color: 0x3b82f6,
-                        specular: 0x111111,
-                        shininess: 100,
-                        flatShading: false
+                    const result = await worker.parseSTL(fileUrl, (progress) => {
+                        setLoadingProgress(progress * 100);
                     });
 
-                    const mesh = new THREE.Mesh(geometry, material);
+                    const loadTime = performance.now() - startTime;
+                    console.log(`⚡ Worker load time: ${loadTime.toFixed(0)}ms`);
 
-                    // Center geometry
-                    geometry.computeBoundingBox();
-                    geometry.center();
+                    // Reconstruct geometry from serialized data
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute(
+                        'position',
+                        new THREE.BufferAttribute(result.geometry.attributes.position.array, 3)
+                    );
+                    if (result.geometry.attributes.normal) {
+                        geometry.setAttribute(
+                            'normal',
+                            new THREE.BufferAttribute(result.geometry.attributes.normal.array, 3)
+                        );
+                    } else {
+                        geometry.computeVertexNormals();
+                    }
 
-                    // Add wireframe
-                    const wireframe = new THREE.WireframeGeometry(geometry);
-                    const line = new THREE.LineSegments(wireframe);
-                    (line.material as THREE.LineBasicMaterial).color.setHex(0x1e40af);
-                    (line.material as THREE.LineBasicMaterial).opacity = 0.3;
-                    (line.material as THREE.LineBasicMaterial).transparent = true;
-                    mesh.add(line);
+                    // Set analysis
+                    setAnalysis(result.analysis);
+                    if (onAnalysisComplete) {
+                        onAnalysisComplete(result.analysis);
+                    }
 
-                    scene.add(mesh);
+                    // Render geometry
+                    renderGeometry(geometry, result.analysis);
+                } else {
+                    // Fallback to main thread (for comparison)
+                    const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js');
+                    const { GeometryAnalyzer } = await import('@/lib/3d/core/GeometryAnalyzer');
 
-                    // Adjust camera to fit object using bounding box from analysis
-                    const { size } = geometryAnalysis.boundingBox;
-                    const maxDim = Math.max(size.x, size.y, size.z);
-                    const fov = camera.fov * (Math.PI / 180);
-                    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-                    cameraZ *= 1.5; // Zoom out a bit
+                    const loader = new STLLoader();
+                    const startTime = performance.now();
 
-                    camera.position.set(cameraZ, cameraZ, cameraZ);
-                    camera.lookAt(0, 0, 0);
-                    controls.target.set(0, 0, 0);
-                    controls.update();
+                    loader.load(
+                        fileUrl,
+                        (geometry) => {
+                            const loadTime = performance.now() - startTime;
+                            console.log(`🐌 Main thread load time: ${loadTime.toFixed(0)}ms`);
 
-                    setIsLoading(false);
-                } catch (error) {
-                    console.error('Error analyzing geometry:', error);
-                    setIsLoading(false);
+                            const geometryAnalysis = GeometryAnalyzer.analyze(geometry);
+                            setAnalysis(geometryAnalysis);
+                            if (onAnalysisComplete) {
+                                onAnalysisComplete(geometryAnalysis);
+                            }
+
+                            renderGeometry(geometry, geometryAnalysis);
+                        },
+                        (xhr) => {
+                            setLoadingProgress((xhr.loaded / xhr.total) * 100);
+                        },
+                        (error) => {
+                            console.error('Error loading STL:', error);
+                            setIsLoading(false);
+                        }
+                    );
                 }
-            },
-            (xhr) => {
-                console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
-            },
-            (error) => {
-                console.error('An error happened loading the STL:', error);
+            } catch (error) {
+                console.error('Error in worker:', error);
                 setIsLoading(false);
-                // Fallback to cube if error
-                const fallbackGeometry = new THREE.BoxGeometry(2, 2, 2);
-                const fallbackMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-                const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
-                scene.add(fallbackMesh);
             }
-        );
+        };
+
+        const renderGeometry = (geometry: THREE.BufferGeometry, geometryAnalysis: GeometryAnalysis) => {
+            // Material
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x3b82f6,
+                specular: 0x111111,
+                shininess: 100,
+                flatShading: false
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+
+            // Center geometry
+            geometry.computeBoundingBox();
+            geometry.center();
+
+            // Add wireframe
+            const wireframe = new THREE.WireframeGeometry(geometry);
+            const line = new THREE.LineSegments(wireframe);
+            (line.material as THREE.LineBasicMaterial).color.setHex(0x1e40af);
+            (line.material as THREE.LineBasicMaterial).opacity = 0.3;
+            (line.material as THREE.LineBasicMaterial).transparent = true;
+            mesh.add(line);
+
+            scene.add(mesh);
+
+            // Adjust camera using bounding box from analysis
+            const { size } = geometryAnalysis.boundingBox;
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.5;
+
+            camera.position.set(cameraZ, cameraZ, cameraZ);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+
+            setIsLoading(false);
+            setLoadingProgress(100);
+        };
+
+        loadSTL();
 
         // Animation loop
         const animate = () => {
@@ -170,7 +219,7 @@ export default function Viewer3D({
                 containerRef.current.removeChild(renderer.domElement);
             }
         };
-    }, [fileUrl, onAnalysisComplete]);
+    }, [fileUrl, onAnalysisComplete, useWorker]);
 
     return (
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -181,6 +230,20 @@ export default function Viewer3D({
                 <p className="text-slate-600">
                     Fichier: <span className="font-medium text-slate-900">{fileName}</span>
                 </p>
+                {isLoading && (
+                    <div className="mt-4">
+                        <div className="flex justify-between text-sm text-slate-600 mb-2">
+                            <span>Chargement...</span>
+                            <span>{loadingProgress.toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                            <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${loadingProgress}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6 p-6">
@@ -211,7 +274,7 @@ export default function Viewer3D({
                     </div>
                 </div>
 
-                {/* Geometry Info - NOW WITH REAL DATA */}
+                {/* Geometry Info */}
                 <div className="space-y-4">
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                         <h3 className="font-semibold text-slate-900 mb-3">
