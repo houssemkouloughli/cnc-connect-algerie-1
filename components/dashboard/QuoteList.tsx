@@ -21,18 +21,22 @@ const statusColors: Record<Quote['status'], string> = {
     awarded: 'bg-green-100 text-green-800'
 };
 
+import { EmptyState } from '@/components/ui/EmptyState';
+
+// ...
+
 export default function QuoteList({ quotes }: QuoteListProps) {
     if (quotes.length === 0) {
         return (
             <Card>
-                <CardContent className="py-12 text-center">
-                    <FileText className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                        Aucun devis pour le moment
-                    </h3>
-                    <p className="text-slate-600">
-                        Créez votre premier devis en cliquant sur "Nouveau Devis"
-                    </p>
+                <CardContent className="p-0">
+                    <EmptyState
+                        icon={FileText}
+                        title="Aucun devis pour le moment"
+                        description="Commencez par créer votre premier devis pour recevoir des offres de nos partenaires."
+                        actionLabel="Créer un Devis"
+                        actionHref="/devis"
+                    />
                 </CardContent>
             </Card>
         );

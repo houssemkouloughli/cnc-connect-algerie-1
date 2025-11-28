@@ -8,10 +8,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { getClientQuotes, Quote } from '@/lib/queries/quotes';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Package, FileText, Settings, LogOut, Plus, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { LogOut, Plus } from 'lucide-react';
 import { signOut } from '@/lib/utils/auth';
 import QuoteList from '@/components/dashboard/QuoteList';
+import { useToast } from '@/components/ui/Toast';
 
 interface UserProfile {
     id: string;
@@ -26,7 +27,7 @@ function ClientDashboardContent() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showSuccess, setShowSuccess] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         const loadData = async () => {
@@ -55,12 +56,16 @@ function ClientDashboardContent() {
 
         loadData();
 
+        loadData();
+
         // Check for success message
         if (searchParams.get('success') === 'true') {
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 5000);
+            showToast('Devis créé avec succès !', 'success');
+            // Remove success param from URL without refresh
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
         }
-    }, [router, searchParams]);
+    }, [router, searchParams, showToast]);
 
     if (loading) {
         return (
@@ -81,16 +86,6 @@ function ClientDashboardContent() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-            {/* Success Message */}
-            {showSuccess && (
-                <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
-                    <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5" />
-                        <p className="font-medium">Devis créé avec succès !</p>
-                    </div>
-                </div>
-            )}
-
             {/* Header */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

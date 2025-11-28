@@ -242,12 +242,18 @@ export default function Viewer3D({
                 {isLoading && (
                     <div className="mt-4">
                         <div className="flex justify-between text-sm text-slate-600 mb-2">
-                            <span>Chargement...</span>
-                            <span>{loadingProgress.toFixed(0)}%</span>
+                            <span className="flex items-center gap-2">
+                                <div className="animate-spin w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                {loadingProgress < 30 ? 'Chargement du fichier...' :
+                                    loadingProgress < 70 ? 'Analyse de la géométrie...' :
+                                        loadingProgress < 100 ? 'Vérification de la fabricabilité...' :
+                                            'Finalisation...'}
+                            </span>
+                            <span className="font-medium">{loadingProgress.toFixed(0)}%</span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                             <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
                                 style={{ width: `${loadingProgress}%` }}
                             />
                         </div>
