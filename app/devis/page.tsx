@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Upload, FileUp, Package, Settings, CheckCircle2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import CADUploader from './components/CADUploader';
 import Viewer3D from './components/Viewer3D';
 import QuoteForm from './components/QuoteForm';
@@ -9,10 +11,30 @@ import QuoteForm from './components/QuoteForm';
 type Step = 1 | 2 | 3;
 
 export default function DevisPage() {
+    const router = useRouter();
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [fileUrl, setFileUrl] = useState<string>('');
     const [geometryData, setGeometryData] = useState<any>(null);
+
+    // Vérifier l'authentification au chargement
+    useEffect(() => {
+        const checkAuth = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                // Rediriger vers login si non authentifié
+                router.push('/login?redirect=/devis');
+                return;
+            }
+
+            setIsCheckingAuth(false);
+        };
+
+        checkAuth();
+    }, [router]);
 
     const steps = [
         { number: 1, title: 'Upload Fichier', icon: FileUp },
@@ -30,6 +52,19 @@ export default function DevisPage() {
     const handleContinueToConfig = () => {
         setCurrentStep(3);
     };
+
+    // Afficher écran de chargement pendant vérification auth
+    if (isCheckingAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+                    <p className="mt-6 text-lg font-medium text-slate-700">Vérification...</p>
+                    <p className="mt-2 text-sm text-slate-500">Redirection vers la connexion si nécessaire</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
