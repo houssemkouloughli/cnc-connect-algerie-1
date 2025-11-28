@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { createQuote } from '@/lib/queries/quotes';
 import { useRouter } from 'next/navigation';
 import { PriceEstimator } from '@/lib/pricing/PriceEstimator';
+import { useToast } from '@/components/ui/Toast';
+import { getUserFriendlyError } from '@/lib/errors/handleError';
 import type { GeometryAnalysis } from '@/lib/3d/core/types';
 import type { DFMAnalysisResult } from '@/lib/3d/analysis/types';
 import type { PriceEstimate } from '@/lib/pricing/types';
@@ -43,8 +45,8 @@ export default function QuoteForm({
     onBack
 }: QuoteFormProps) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
     const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
 
     const [formData, setFormData] = useState({
@@ -97,11 +99,13 @@ export default function QuoteForm({
             await createQuote(quoteData);
 
             // Redirect to client dashboard with success message
+            showToast('Devis créé avec succès !', 'success');
             router.push('/client?success=true');
 
         } catch (err: any) {
             console.error('Error creating quote:', err);
-            setError(err.message || 'Erreur lors de la création du devis');
+            const friendlyError = getUserFriendlyError(err);
+            showToast(friendlyError, 'error');
             setIsSubmitting(false);
         }
     };
@@ -124,11 +128,7 @@ export default function QuoteForm({
                 </p>
             </div>
 
-            {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{error}</p>
-                </div>
-            )}
+
 
             <div className="space-y-6">
                 {/* Part Name */}

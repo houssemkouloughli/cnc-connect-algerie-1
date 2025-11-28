@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { Upload, FileUp } from 'lucide-react';
 import { getGeometryCache } from '@/lib/3d/cache/GeometryCache';
+import { useToast } from '@/components/ui/Toast';
 
 interface CADUploaderProps {
     onUploadComplete: (file: File, url: string, geometry: any) => void;
 }
 
 export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
+    const { showToast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -16,7 +18,7 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
 
     const handleFile = async (file: File) => {
         if (!file.name.match(/\.(stl|STL)$/)) {
-            alert('Seuls les fichiers STL sont supportés');
+            showToast('Seuls les fichiers STL sont supportés', 'error');
             return;
         }
 
@@ -65,6 +67,7 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
             }
         } catch (error) {
             console.error('Upload error:', error);
+            showToast('Erreur lors du traitement du fichier', 'error');
             setIsUploading(false);
             setCacheStatus(null);
         }
@@ -97,10 +100,10 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
             {/* Cache Status Indicator */}
             {cacheStatus && (
                 <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${cacheStatus === 'hit'
-                        ? 'bg-green-50 border border-green-200'
-                        : cacheStatus === 'miss'
-                            ? 'bg-blue-50 border border-blue-200'
-                            : 'bg-slate-50 border border-slate-200'
+                    ? 'bg-green-50 border border-green-200'
+                    : cacheStatus === 'miss'
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-slate-50 border border-slate-200'
                     }`}>
                     {cacheStatus === 'hit' && (
                         <>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,10 +20,14 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`${inter.className} antialiased bg-slate-50`}>
-        <Header />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <ErrorBoundary>
+          <ToastProvider>
+            <Header />
+            <main className="min-h-screen">
+              {children}
+            </main>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
