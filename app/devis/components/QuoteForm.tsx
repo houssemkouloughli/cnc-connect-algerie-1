@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Save, Loader2, DollarSign } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { createQuote } from '@/lib/queries/quotes';
 import { useRouter } from 'next/navigation';
+import { PriceEstimator } from '@/lib/pricing/PriceEstimator';
+import type { GeometryAnalysis } from '@/lib/3d/core/types';
+import type { DFMAnalysisResult } from '@/lib/3d/analysis/types';
+import type { PriceEstimate } from '@/lib/pricing/types';
 
 interface QuoteFormProps {
     fileUrl: string;
@@ -41,6 +45,7 @@ export default function QuoteForm({
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
 
     const [formData, setFormData] = useState({
         part_name: fileName.replace(/\.[^/.]+$/, ''), // Remove extension
@@ -50,6 +55,28 @@ export default function QuoteForm({
         target_price: '',
         notes: ''
     });
+
+    // Calculate price estimate when form data changes
+    useEffect(() => {
+        if (geometryData?.analysis) {
+            try {
+                const estimate = PriceEstimator.estimate(
+                    geometryData.analysis as GeometryAnalysis,
+                    geometryData.dfmAnalysis as DFMAnalysisResult | null,
+                    {
+                        material: formData.material,
+                        finish: formData.finish,
+                        quantity: formData.quantity,
+                        tolerance: 'standard',
+                        urgency: 'standard'
+                    }
+                );
+                setPriceEstimate(estimate);
+            } catch (err) {
+                console.error('Price calculation error:', err);
+            }
+        }
+    }, [formData.material, formData.finish, formData.quantity, geometryData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -204,67 +231,30 @@ export default function QuoteForm({
                         onChange={handleChange}
                         rows={4}
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        placeholder="Tolérances spécifiques, finitions particulières, délais..."
-                    />
+                        disabled={isSubmitting}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                        Retour
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Envoi en cours...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-5 h-5" />
+                                Soumettre le Devis
+                            </>
+                        )}
+                    </button>
                 </div>
-            </div>
-
-            {/* Estimated Summary */}
-            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                <h3 className="font-semibold text-slate-900 mb-4">Récapitulatif</h3>
-                <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span className="text-slate-600">Pièce:</span>
-                        <p className="font-medium text-slate-900">{formData.part_name}</p>
-                    </div>
-                    <div>
-                        <span className="text-slate-600">Matériau:</span>
-                        <p className="font-medium text-slate-900">
-                            {MATERIALS.find(m => m.value === formData.material)?.label}
-                        </p>
-                    </div>
-                    <div>
-                        <span className="text-slate-600">Finition:</span>
-                        <p className="font-medium text-slate-900">
-                            {FINISHES.find(f => f.value === formData.finish)?.label}
-                        </p>
-                    </div>
-                    <div>
-                        <span className="text-slate-600">Quantité:</span>
-                        <p className="font-medium text-slate-900">{formData.quantity} pièce(s)</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-8 flex justify-between">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    Retour
-                </button>
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                    {isSubmitting ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Envoi en cours...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-5 h-5" />
-                            Soumettre le Devis
-                        </>
-                    )}
-                </button>
-            </div>
         </form>
     );
 }
