@@ -5,6 +5,8 @@ import { ArrowRight, ArrowLeft, RotateCcw, ZoomIn, ZoomOut, Maximize } from 'luc
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { GeometryAnalyzer } from '@/lib/3d/core/GeometryAnalyzer';
+import type { GeometryAnalysis } from '@/lib/3d/core/types';
 
 interface Viewer3DProps {
     fileUrl: string;
@@ -12,6 +14,7 @@ interface Viewer3DProps {
     geometryData: any;
     onContinue: () => void;
     onBack: () => void;
+    onAnalysis Complete ?: (analysis: GeometryAnalysis) => void;
 }
 
 export default function Viewer3D({
@@ -19,10 +22,12 @@ export default function Viewer3D({
     fileName,
     geometryData,
     onContinue,
-    onBack
+    onBack,
+    onAnalysisComplete
 }: Viewer3DProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [analysis, setAnalysis] = useState<GeometryAnalysis | null>(null);
 
     useEffect(() => {
         if (!containerRef.current || !fileUrl) return;
@@ -74,44 +79,57 @@ export default function Viewer3D({
         loader.load(
             fileUrl,
             (geometry) => {
-                // Material
-                const material = new THREE.MeshPhongMaterial({
-                    color: 0x3b82f6,
-                    specular: 0x111111,
-                    shininess: 100,
-                    flatShading: false
-                });
+                try {
+                    // ANALYZE GEOMETRY FIRST
+                    const geometryAnalysis = GeometryAnalyzer.analyze(geometry);
+                    console.log('📊 Geometry Analysis:', geometryAnalysis);
+                    setAnalysis(geometryAnalysis);
 
-                const mesh = new THREE.Mesh(geometry, material);
+                    if (onAnalysisComplete) {
+                        onAnalysisComplete(geometryAnalysis);
+                    }
 
-                // Center geometry
-                geometry.computeBoundingBox();
-                geometry.center();
+                    // Material
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x3b82f6,
+                        specular: 0x111111,
+                        shininess: 100,
+                        flatShading: false
+                    });
 
-                // Add wireframe
-                const wireframe = new THREE.WireframeGeometry(geometry);
-                const line = new THREE.LineSegments(wireframe);
-                (line.material as THREE.LineBasicMaterial).color.setHex(0x1e40af);
-                (line.material as THREE.LineBasicMaterial).opacity = 0.3;
-                (line.material as THREE.LineBasicMaterial).transparent = true;
-                mesh.add(line);
+                    const mesh = new THREE.Mesh(geometry, material);
 
-                scene.add(mesh);
+                    // Center geometry
+                    geometry.computeBoundingBox();
+                    geometry.center();
 
-                // Adjust camera to fit object
-                const boundingBox = new THREE.Box3().setFromObject(mesh);
-                const size = boundingBox.getSize(new THREE.Vector3());
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const fov = camera.fov * (Math.PI / 180);
-                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-                cameraZ *= 1.5; // Zoom out a bit
+                    // Add wireframe
+                    const wireframe = new THREE.WireframeGeometry(geometry);
+                    const line = new THREE.LineSegments(wireframe);
+                    (line.material as THREE.LineBasicMaterial).color.setHex(0x1e40af);
+                    (line.material as THREE.LineBasicMaterial).opacity = 0.3;
+                    (line.material as THREE.LineBasicMaterial).transparent = true;
+                    mesh.add(line);
 
-                camera.position.set(cameraZ, cameraZ, cameraZ);
-                camera.lookAt(0, 0, 0);
-                controls.target.set(0, 0, 0);
-                controls.update();
+                    scene.add(mesh);
 
-                setIsLoading(false);
+                    // Adjust camera to fit object using bounding box from analysis
+                    const { size } = geometryAnalysis.boundingBox;
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const fov = camera.fov * (Math.PI / 180);
+                    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                    cameraZ *= 1.5; // Zoom out a bit
+
+                    camera.position.set(cameraZ, cameraZ, cameraZ);
+                    camera.lookAt(0, 0, 0);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+
+                    setIsLoading(false);
+                } catch (error) {
+                    console.error('Error analyzing geometry:', error);
+                    setIsLoading(false);
+                }
             },
             (xhr) => {
                 console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
@@ -120,10 +138,10 @@ export default function Viewer3D({
                 console.error('An error happened loading the STL:', error);
                 setIsLoading(false);
                 // Fallback to cube if error
-                const geometry = new THREE.BoxGeometry(2, 2, 2);
-                const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-                const mesh = new THREE.Mesh(geometry, material);
-                scene.add(mesh);
+                const fallbackGeometry = new THREE.BoxGeometry(2, 2, 2);
+                const fallbackMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+                const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+                scene.add(fallbackMesh);
             }
         );
 
@@ -148,9 +166,11 @@ export default function Viewer3D({
         return () => {
             window.removeEventListener('resize', handleResize);
             renderer.dispose();
-            containerRef.current?.removeChild(renderer.domElement);
+            if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+                containerRef.current.removeChild(renderer.domElement);
+            }
         };
-    }, [fileUrl]);
+    }, [fileUrl, onAnalysisComplete]);
 
     return (
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -191,7 +211,7 @@ export default function Viewer3D({
                     </div>
                 </div>
 
-                {/* Geometry Info */}
+                {/* Geometry Info - NOW WITH REAL DATA */}
                 <div className="space-y-4">
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                         <h3 className="font-semibold text-slate-900 mb-3">
@@ -201,19 +221,29 @@ export default function Viewer3D({
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Volume</span>
                                 <span className="font-medium text-slate-900">
-                                    {geometryData?.volume || 'N/A'} mm³
+                                    {analysis ? `${analysis.volume.toFixed(2)} mm³` : 'Calcul...'}
                                 </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Surface</span>
                                 <span className="font-medium text-slate-900">
-                                    {geometryData?.surface_area || 'N/A'} mm²
+                                    {analysis ? `${analysis.surfaceArea.toFixed(2)} mm²` : 'Calcul...'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-600">Triangles</span>
+                                <span className="font-medium text-slate-900">
+                                    {analysis ? analysis.triangleCount.toLocaleString() : 'Calcul...'}
                                 </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Complexité</span>
-                                <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    {geometryData?.complexity || 'Moyenne'}
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${analysis?.complexity === 'low' ? 'bg-green-100 text-green-800' :
+                                        analysis?.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                            analysis?.complexity === 'high' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-red-100 text-red-800'
+                                    }`}>
+                                    {analysis?.complexity.toUpperCase() || 'CALCUL...'}
                                 </span>
                             </div>
                         </div>
@@ -230,13 +260,15 @@ export default function Viewer3D({
 
                     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                         <h3 className="font-semibold text-slate-900 mb-2 text-sm">
-                            Recommandations
+                            Dimensions
                         </h3>
-                        <ul className="text-xs text-slate-600 space-y-1">
-                            <li>• Matériau recommandé: Aluminium 6061-T6</li>
-                            <li>• Finition suggérée: Anodisation</li>
-                            <li>• Processus: Fraisage CNC 3 axes</li>
-                        </ul>
+                        {analysis && (
+                            <ul className="text-xs text-slate-600 space-y-1">
+                                <li>• Longueur: {analysis.boundingBox.size.x.toFixed(2)} mm</li>
+                                <li>• Largeur: {analysis.boundingBox.size.y.toFixed(2)} mm</li>
+                                <li>• Hauteur: {analysis.boundingBox.size.z.toFixed(2)} mm</li>
+                            </ul>
+                        )}
                     </div>
                 </div>
             </div>
@@ -252,7 +284,8 @@ export default function Viewer3D({
                 </button>
                 <button
                     onClick={onContinue}
-                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    disabled={!analysis}
+                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Continuer
                     <ArrowRight className="w-5 h-5" />
