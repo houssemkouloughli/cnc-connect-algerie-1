@@ -1,8 +1,101 @@
 ﻿
 > cnc-connect-algerie@0.1.0 build
-> next build --no-lint
+> next build
 
   Γû▓ Next.js 14.2.15
   - Environments: .env.local
 
-   Creating an optimized production build ...
+node.exe : 
+Au caractère Ligne:1 
+: 1
++ & "C:\Program Files
+\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : 
+NotSpecified: (:    
+String) [], 
+RemoteExc    eption
+    + 
+FullyQualifiedError  
+  Id : 
+NativeCommandErr    
+or
+ 
+> Build error 
+occurred
+Error: EINVAL: 
+invalid argument, 
+readlink 'C:\Users\le
+nvo\OneDrive\Desktop\
+cnc-connect-algerie\.
+next\export\404.html'
+    at async 
+Object.readlink (node
+:internal/fs/promises
+:976:10)
+    at async C:\Users
+\lenvo\OneDrive\Deskt
+op\cnc-connect-algeri
+e\node_modules\next\d
+ist\lib\recursive-del
+ete.js:58:30
+    at async 
+Promise.all (index 0)
+    at async 
+recursiveDelete (C:\U
+sers\lenvo\OneDrive\D
+esktop\cnc-connect-al
+gerie\node_modules\ne
+xt\dist\lib\recursive
+-delete.js:51:5)
+    at async C:\Users
+\lenvo\OneDrive\Deskt
+op\cnc-connect-algeri
+e\node_modules\next\d
+ist\lib\recursive-del
+ete.js:68:17
+    at async 
+Promise.all (index 1)
+    at async 
+recursiveDelete (C:\U
+sers\lenvo\OneDrive\D
+esktop\cnc-connect-al
+gerie\node_modules\ne
+xt\dist\lib\recursive
+-delete.js:51:5)
+    at async C:\Users
+\lenvo\OneDrive\Deskt
+op\cnc-connect-algeri
+e\node_modules\next\d
+ist\build\index.js:69
+0:17
+    at async 
+Span.traceAsyncFn (C:
+\Users\lenvo\OneDrive
+\Desktop\cnc-connect-
+algerie\node_modules\
+next\dist\trace\trace
+.js:154:20)
+    at async build (C
+:\Users\lenvo\OneDriv
+e\Desktop\cnc-connect
+-algerie\node_modules
+\next\dist\build\inde
+x.js:364:9) {
+  errno: -4071,
+  code: 'EINVAL',
+  syscall: 
+'readlink',
+  path: 'C:\\Users\\l
+envo\\OneDrive\\Deskt
+op\\cnc-connect-alger
+ie\\.next\\export\\40
+4.html'
+}

@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -20,7 +20,7 @@ interface UserProfile {
     role: string;
 }
 
-export default function ClientDashboard() {
+function ClientDashboardContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -158,5 +158,20 @@ export default function ClientDashboard() {
                 <QuoteList quotes={quotes} />
             </div>
         </div>
+    );
+}
+
+export default function ClientDashboard() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-slate-600">Chargement...</p>
+                </div>
+            </div>
+        }>
+            <ClientDashboardContent />
+        </Suspense>
     );
 }
