@@ -116,8 +116,27 @@ export default function Viewer3D({
                         onAnalysisComplete(result.analysis);
                     }
 
+                    // Perform DFM analysis
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute(
+                        'position',
+                        new THREE.BufferAttribute(result.geometry.attributes.position.array, 3)
+                    );
+                    if (result.geometry.attributes.normal) {
+                        geometry.setAttribute(
+                            'normal',
+                            new THREE.BufferAttribute(result.geometry.attributes.normal.array, 3)
+                        );
+                    } else {
+                        geometry.computeVertexNormals();
+                    }
+
+                    const dfm = DFMAnalyzer.analyze(geometry, result.analysis);
+                    console.log('🏭 DFM Analysis:', dfm);
+                    setDfmAnalysis(dfm);
+
                     // Render geometry
-                    renderGeometry(geometry, result.analysis);
+                    renderGeometry(geometry, result.analysis, dfm);
                 } else {
                     // Fallback to main thread (for comparison)
                     const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js');
@@ -155,7 +174,7 @@ export default function Viewer3D({
             }
         };
 
-        const renderGeometry = (geometry: THREE.BufferGeometry, geometryAnalysis: GeometryAnalysis) => {
+        const renderGeometry = (geometry: THREE.BufferGeometry, geometryAnalysis: GeometryAnalysis, dfm?: DFMAnalysisResult) => {
             // Material
             const material = new THREE.MeshPhongMaterial({
                 color: 0x3b82f6,
@@ -311,53 +330,41 @@ export default function Viewer3D({
                                             'bg-red-100 text-red-800'
                                     }`}>
                                     {analysis?.complexity.toUpperCase() || 'CALCUL...'}
-                                </span>
+                            </div>
+
+                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                <h3 className="font-semibold text-slate-900 mb-2 text-sm">
+                                    Dimensions
+                                </h3>
+                                {analysis && (
+                                    <ul className="text-xs text-slate-600 space-y-1">
+                                        <li>• Longueur: {analysis.boundingBox.size.x.toFixed(2)} mm</li>
+                                        <li>• Largeur: {analysis.boundingBox.size.y.toFixed(2)} mm</li>
+                                        <li>• Hauteur: {analysis.boundingBox.size.z.toFixed(2)} mm</li>
+                                    </ul>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                        <h3 className="font-semibold text-blue-900 mb-2">
-                            ✓ Modèle Validé
-                        </h3>
-                        <p className="text-sm text-blue-700">
-                            Votre modèle 3D est valide et prêt pour la fabrication.
-                        </p>
-                    </div>
-
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                        <h3 className="font-semibold text-slate-900 mb-2 text-sm">
-                            Dimensions
-                        </h3>
-                        {analysis && (
-                            <ul className="text-xs text-slate-600 space-y-1">
-                                <li>• Longueur: {analysis.boundingBox.size.x.toFixed(2)} mm</li>
-                                <li>• Largeur: {analysis.boundingBox.size.y.toFixed(2)} mm</li>
-                                <li>• Hauteur: {analysis.boundingBox.size.z.toFixed(2)} mm</li>
-                            </ul>
-                        )}
+                    {/* Action Buttons */}
+                    <div className="border-t border-slate-200 p-6 flex justify-between">
+                        <button
+                            onClick={onBack}
+                            className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                            Retour
+                        </button>
+                        <button
+                            onClick={onContinue}
+                            disabled={!analysis}
+                            className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Continuer
+                            <ArrowRight className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="border-t border-slate-200 p-6 flex justify-between">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    Retour
-                </button>
-                <button
-                    onClick={onContinue}
-                    disabled={!analysis}
-                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continuer
-                    <ArrowRight className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-    );
+                );
 }
