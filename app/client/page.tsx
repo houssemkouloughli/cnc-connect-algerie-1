@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { getClientQuotes, Quote } from '@/lib/queries/quotes';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Package, FileText, Settings, LogOut, Plus } from 'lucide-react';
+import { Package, FileText, Settings, LogOut, Plus, CheckCircle } from 'lucide-react';
 import { signOut } from '@/lib/utils/auth';
+import QuoteList from '@/components/dashboard/QuoteList';
 
 interface UserProfile {
     id: string;
@@ -18,11 +20,14 @@ interface UserProfile {
 
 export default function ClientDashboard() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [quotes, setQuotes] = useState<Quote[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
-        const loadProfile = async () => {
+        const loadData = async () => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
 
@@ -38,11 +43,22 @@ export default function ClientDashboard() {
                 .single();
 
             setProfile(profileData);
+
+            // Load quotes
+            const quotesData = await getClientQuotes();
+            setQuotes(quotesData);
+
             setLoading(false);
         };
 
-        loadProfile();
-    }, [router]);
+        loadData();
+
+        // Check for success message
+        if (searchParams.get('success') === 'true') {
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 5000);
+        }
+    }, [router, searchParams]);
 
     if (loading) {
         return (
@@ -56,8 +72,23 @@ export default function ClientDashboard() {
         return null;
     }
 
+    // Calculate statistics
+    const openQuotes = quotes.filter(q => q.status === 'open').length;
+    const awardedQuotes = quotes.filter(q => q.status === 'awarded').length;
+    const closedQuotes = quotes.filter(q => q.status === 'closed').length;
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+            {/* Success Message */}
+            {showSuccess && (
+                <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+                    <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5" />
+                        <p className="font-medium">Devis créé avec succès !</p>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -95,7 +126,7 @@ export default function ClientDashboard() {
                             <CardTitle className="text-lg">Devis en Cours</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-4xl font-bold text-blue-600">0</p>
+                            <p className="text-4xl font-bold text-blue-600">{openQuotes}</p>
                             <p className="text-sm text-slate-600 mt-1">En attente de réponses</p>
                         </CardContent>
                     </Card>
@@ -105,7 +136,7 @@ export default function ClientDashboard() {
                             <CardTitle className="text-lg">Commandes Actives</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-4xl font-bold text-green-600">0</p>
+                            <p className="text-4xl font-bold text-green-600">{awardedQuotes}</p>
                             <p className="text-sm text-slate-600 mt-1">En production</p>
                         </CardContent>
                     </Card>
@@ -115,54 +146,14 @@ export default function ClientDashboard() {
                             <CardTitle className="text-lg">Projets Terminés</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-4xl font-bold text-slate-600">0</p>
+                            <p className="text-4xl font-bold text-slate-600">{closedQuotes}</p>
                             <p className="text-sm text-slate-600 mt-1">Livrés avec succès</p>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Actions Rapides</CardTitle>
-                        <CardDescription>
-                            Gérez vos devis et commandes en quelques clics
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <Link href="/devis">
-                                <div className="p-6 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer text-center">
-                                    <Plus className="w-8 h-8 mx-auto mb-3 text-blue-600" />
-                                    <p className="font-medium text-slate-900">Nouveau Devis</p>
-                                    <p className="text-sm text-slate-600 mt-1">Uploadez un fichier CAD</p>
-                                </div>
-                            </Link>
-
-                            <div className="p-6 border border-slate-200 rounded-xl bg-slate-50 text-center opacity-50 cursor-not-allowed">
-                                <FileText className="w-8 h-8 mx-auto mb-3 text-slate-400" />
-                                <p className="font-medium text-slate-600">Mes Devis</p>
-                                <p className="text-sm text-slate-500 mt-1">À venir</p>
-                            </div>
-
-                            <div className="p-6 border border-slate-200 rounded-xl bg-slate-50 text-center opacity-50 cursor-not-allowed">
-                                <Settings className="w-8 h-8 mx-auto mb-3 text-slate-400" />
-                                <p className="font-medium text-slate-600">Mon Profil</p>
-                                <p className="text-sm text-slate-500 mt-1">À venir</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Info Message */}
-                <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
-                    <h3 className="font-semibold text-blue-900 mb-2">🚀 Dashboard en Construction</h3>
-                    <p className="text-blue-800">
-                        Cette page sera bientôt enrichie avec la liste de vos devis, le suivi de vos commandes,
-                        et la gestion de votre profil. Pour l'instant, vous pouvez créer un nouveau devis en cliquant
-                        sur le bouton ci-dessus.
-                    </p>
-                </div>
+                {/* Quote List */}
+                <QuoteList quotes={quotes} />
             </div>
         </div>
     );

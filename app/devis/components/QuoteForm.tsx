@@ -69,8 +69,8 @@ export default function QuoteForm({
 
             await createQuote(quoteData);
 
-            // Redirect to success or quotes list page
-            router.push('/dashboard?tab=quotes&success=true');
+            // Redirect to client dashboard with success message
+            router.push('/client?success=true');
 
         } catch (err: any) {
             console.error('Error creating quote:', err);
