@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowLeft, RotateCcw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RotateCcw, ZoomIn, ZoomOut, Maximize, AlertTriangle } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { getSTLWorker } from '@/lib/3d/workers/WorkerManager';
+import { DFMAnalyzer } from '@/lib/3d/core/DFMAnalyzer';
 import type { GeometryAnalysis } from '@/lib/3d/core/types';
+import type { DFMAnalysisResult } from '@/lib/3d/analysis/types';
 
 interface Viewer3DProps {
     fileUrl: string;
@@ -28,6 +30,8 @@ export default function Viewer3D({
     const [isLoading, setIsLoading] = useState(true);
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [analysis, setAnalysis] = useState<GeometryAnalysis | null>(null);
+    const [dfmAnalysis, setDfmAnalysis] = useState<DFMAnalysisResult | null>(null);
+    const [showOverhangs, setShowOverhangs] = useState(true);
     const [useWorker] = useState(true); // Toggle for testing
 
     useEffect(() => {
@@ -302,9 +306,9 @@ export default function Viewer3D({
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Complexité</span>
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${analysis?.complexity === 'low' ? 'bg-green-100 text-green-800' :
-                                        analysis?.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                            analysis?.complexity === 'high' ? 'bg-orange-100 text-orange-800' :
-                                                'bg-red-100 text-red-800'
+                                    analysis?.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                        analysis?.complexity === 'high' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
                                     }`}>
                                     {analysis?.complexity.toUpperCase() || 'CALCUL...'}
                                 </span>
