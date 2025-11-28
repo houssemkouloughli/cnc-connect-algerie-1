@@ -9,10 +9,15 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 -- =====================================================
 -- STORAGE POLICIES
 -- =====================================================
--- Create bucket if not exists (needs to be done via API or Dashboard usually, but policies can be set)
+-- Create bucket if not exists
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('cad-files', 'cad-files', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Authenticated users can upload CAD files" ON storage.objects;
+DROP POLICY IF EXISTS "Public Access to CAD files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own CAD files" ON storage.objects;
 
 -- Policy: Anyone can upload (authenticated)
 CREATE POLICY "Authenticated users can upload CAD files"
@@ -35,12 +40,16 @@ USING ( bucket_id = 'cad-files' AND auth.uid() = owner );
 -- =====================================================
 -- PROFILES POLICIES
 -- =====================================================
--- Public read access to profiles (needed for partners listing etc)
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+
+-- Public read access to profiles
 CREATE POLICY "Public profiles are viewable by everyone"
 ON profiles FOR SELECT
 USING ( true );
 
--- Users can insert their own profile (handled by trigger, but good to have)
+-- Users can insert their own profile
 CREATE POLICY "Users can insert their own profile"
 ON profiles FOR INSERT
 WITH CHECK ( auth.uid() = id );
@@ -53,6 +62,10 @@ USING ( auth.uid() = id );
 -- =====================================================
 -- PARTNERS POLICIES
 -- =====================================================
+DROP POLICY IF EXISTS "Approved partners are viewable by everyone" ON partners;
+DROP POLICY IF EXISTS "Partners can create their own entry" ON partners;
+DROP POLICY IF EXISTS "Partners can update their own entry" ON partners;
+
 -- Public read access to approved partners
 CREATE POLICY "Approved partners are viewable by everyone"
 ON partners FOR SELECT
@@ -71,6 +84,11 @@ USING ( auth.uid() = profile_id );
 -- =====================================================
 -- QUOTES POLICIES
 -- =====================================================
+DROP POLICY IF EXISTS "Clients can view own quotes" ON quotes;
+DROP POLICY IF EXISTS "Partners can view open quotes" ON quotes;
+DROP POLICY IF EXISTS "Clients can create quotes" ON quotes;
+DROP POLICY IF EXISTS "Clients can update own quotes" ON quotes;
+
 -- Clients can see their own quotes
 CREATE POLICY "Clients can view own quotes"
 ON quotes FOR SELECT
@@ -100,6 +118,10 @@ USING ( auth.uid() = client_id );
 -- =====================================================
 -- BIDS POLICIES
 -- =====================================================
+DROP POLICY IF EXISTS "Clients can view bids on their quotes" ON bids;
+DROP POLICY IF EXISTS "Partners can view own bids" ON bids;
+DROP POLICY IF EXISTS "Partners can create bids" ON bids;
+
 -- Clients can view bids on their quotes
 CREATE POLICY "Clients can view bids on their quotes"
 ON bids FOR SELECT
@@ -136,6 +158,9 @@ WITH CHECK (
 -- =====================================================
 -- ORDERS POLICIES
 -- =====================================================
+DROP POLICY IF EXISTS "Clients can view own orders" ON orders;
+DROP POLICY IF EXISTS "Partners can view assigned orders" ON orders;
+
 -- Clients can view their own orders
 CREATE POLICY "Clients can view own orders"
 ON orders FOR SELECT
@@ -155,10 +180,9 @@ USING (
 -- =====================================================
 -- NOTIFICATIONS POLICIES
 -- =====================================================
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+
 -- Users can view their own notifications
 CREATE POLICY "Users can view own notifications"
 ON notifications FOR SELECT
 USING ( user_id = auth.uid() );
-
--- System can insert notifications (usually done via server-side admin client, which bypasses RLS, but good to have)
--- Note: Server-side admin client bypasses RLS, so INSERT policy might not be strictly needed if only server creates them.
