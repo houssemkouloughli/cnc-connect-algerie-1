@@ -142,7 +142,7 @@ export default function QuoteForm({
                         value={formData.part_name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 font-medium"
                         placeholder="Ex: Support moteur, Carter..."
                     />
                 </div>
@@ -157,7 +157,7 @@ export default function QuoteForm({
                         value={formData.material}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 font-medium"
                     >
                         {MATERIALS.map((material) => (
                             <option key={material.value} value={material.value}>
@@ -176,7 +176,7 @@ export default function QuoteForm({
                         name="finish"
                         value={formData.finish}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 font-medium"
                     >
                         {FINISHES.map((finish) => (
                             <option key={finish.value} value={finish.value}>
@@ -199,7 +199,7 @@ export default function QuoteForm({
                             onChange={handleChange}
                             required
                             min="1"
-                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 font-medium"
                         />
                     </div>
 
@@ -214,130 +214,111 @@ export default function QuoteForm({
                             onChange={handleChange}
                             step="0.01"
                             min="0"
-                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900 font-medium"
                             placeholder="Ex: 50000"
                         />
                     </div>
                 </div>
 
-                {/* Notes */}
-                <div>
-                    <label className="block text-sm font-medium text-slate-900 mb-2">
-                        Notes / Instructions Spéciales
-                    </label>
-                    <textarea
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleChange}
-                        rows={4}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        placeholder="Tolérances spécifiques, finitions particulières, délais..."
-                    />
-                </div>
-            </div>
-
-            {/* Price Estimate */}
-            {priceEstimate && (
-                <div className="mt-8 border-2 border-blue-200 rounded-xl overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold mb-1">Prix Estimé</h3>
-                                <p className="text-blue-100 text-sm">
-                                    Estimation automatique basée sur la géométrie
-                                </p>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-1">Prix Estimé</h3>
+                            <p className="text-blue-100 text-sm">
+                                Estimation automatique basée sur la géométrie
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-3xl font-bold">
+                                {priceEstimate.totalQuantity.total.toLocaleString('fr-DZ')} DZD
                             </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-bold">
-                                    {priceEstimate.totalQuantity.total.toLocaleString('fr-DZ')} DZD
-                                </div>
-                                <div className="text-blue-100 text-sm">
-                                    {priceEstimate.perUnit.total.toLocaleString('fr-DZ')} DZD / pièce
-                                </div>
+                            <div className="text-blue-100 text-sm">
+                                {priceEstimate.perUnit.total.toLocaleString('fr-DZ')} DZD / pièce
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Breakdown */}
-                    <div className="bg-white p-6">
-                        <h4 className="font-semibold text-slate-900 mb-4">Détail du Prix</h4>
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Matériau</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.material.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Usinage</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.machining.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Setup (une fois)</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.setup.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Finition</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.finishing.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
-                            <div className="border-t border-slate-200 pt-3 flex justify-between text-sm">
-                                <span className="text-slate-600">Sous-total</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.subtotal.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Marge (25%)</span>
-                                <span className="font-medium text-slate-900">
-                                    {priceEstimate.totalQuantity.margin.toLocaleString('fr-DZ')} DZD
-                                </span>
-                            </div>
+                {/* Breakdown */}
+                <div className="bg-white p-6">
+                    <h4 className="font-semibold text-slate-900 mb-4">Détail du Prix</h4>
+                    <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Matériau</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.material.toLocaleString('fr-DZ')} DZD
+                            </span>
                         </div>
-
-                        {/* Lead Time */}
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-blue-900">Délai estimé</span>
-                                <span className="text-sm font-semibold text-blue-900">
-                                    {priceEstimate.leadTime.min}-{priceEstimate.leadTime.max} jours
-                                </span>
-                            </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Usinage</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.machining.toLocaleString('fr-DZ')} DZD
+                            </span>
                         </div>
-
-                        {/* Notes */}
-                        {priceEstimate.notes.length > 0 && (
-                            <div className="mt-4 space-y-2">
-                                {priceEstimate.notes.map((note, idx) => (
-                                    <div key={idx} className="text-xs text-slate-600 flex items-start gap-2">
-                                        <span className="text-blue-600">•</span>
-                                        <span>{note}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Confidence Badge */}
-                        <div className="mt-4 flex items-center gap-2">
-                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${priceEstimate.confidence === 'high' ? 'bg-green-100 text-green-800' :
-                                    priceEstimate.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-orange-100 text-orange-800'
-                                }`}>
-                                Confiance: {
-                                    priceEstimate.confidence === 'high' ? 'Élevée' :
-                                        priceEstimate.confidence === 'medium' ? 'Moyenne' :
-                                            'Faible'
-                                }
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Setup (une fois)</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.setup.toLocaleString('fr-DZ')} DZD
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Finition</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.finishing.toLocaleString('fr-DZ')} DZD
+                            </span>
+                        </div>
+                        <div className="border-t border-slate-200 pt-3 flex justify-between text-sm">
+                            <span className="text-slate-600">Sous-total</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.subtotal.toLocaleString('fr-DZ')} DZD
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Marge (25%)</span>
+                            <span className="font-medium text-slate-900">
+                                {priceEstimate.totalQuantity.margin.toLocaleString('fr-DZ')} DZD
                             </span>
                         </div>
                     </div>
+
+                    {/* Lead Time */}
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-blue-900">Délai estimé</span>
+                            <span className="text-sm font-semibold text-blue-900">
+                                {priceEstimate.leadTime.min}-{priceEstimate.leadTime.max} jours
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Notes */}
+                    {priceEstimate.notes.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                            {priceEstimate.notes.map((note, idx) => (
+                                <div key={idx} className="text-xs text-slate-600 flex items-start gap-2">
+                                    <span className="text-blue-600">•</span>
+                                    <span>{note}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Confidence Badge */}
+                    <div className="mt-4 flex items-center gap-2">
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${priceEstimate.confidence === 'high' ? 'bg-green-100 text-green-800' :
+                            priceEstimate.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-orange-100 text-orange-800'
+                            }`}>
+                            Confiance: {
+                                priceEstimate.confidence === 'high' ? 'Élevée' :
+                                    priceEstimate.confidence === 'medium' ? 'Moyenne' :
+                                        'Faible'
+                            }
+                        </span>
+                    </div>
                 </div>
+            </div>
             )}
 
             {/* Action Buttons */}
