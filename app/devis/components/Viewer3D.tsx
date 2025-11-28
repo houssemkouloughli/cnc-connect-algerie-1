@@ -117,20 +117,6 @@ export default function Viewer3D({
                     }
 
                     // Perform DFM analysis
-                    const geometry = new THREE.BufferGeometry();
-                    geometry.setAttribute(
-                        'position',
-                        new THREE.BufferAttribute(result.geometry.attributes.position.array, 3)
-                    );
-                    if (result.geometry.attributes.normal) {
-                        geometry.setAttribute(
-                            'normal',
-                            new THREE.BufferAttribute(result.geometry.attributes.normal.array, 3)
-                        );
-                    } else {
-                        geometry.computeVertexNormals();
-                    }
-
                     const dfm = DFMAnalyzer.analyze(geometry, result.analysis);
                     console.log('🏭 DFM Analysis:', dfm);
                     setDfmAnalysis(dfm);
@@ -325,9 +311,9 @@ export default function Viewer3D({
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Complexité</span>
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${analysis?.complexity === 'low' ? 'bg-green-100 text-green-800' :
-                                        analysis?.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                            analysis?.complexity === 'high' ? 'bg-orange-100 text-orange-800' :
-                                                'bg-red-100 text-red-800'
+                                    analysis?.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                        analysis?.complexity === 'high' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
                                     }`}>
                                     {analysis?.complexity.toUpperCase() || 'CALCUL...'}
                                 </span>
