@@ -1,242 +1,202 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Upload, FileType, AlertCircle, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { useState } from 'react';
+import { Upload, FileUp } from 'lucide-react';
+import { getGeometryCache } from '@/lib/3d/cache/GeometryCache';
 
 interface CADUploaderProps {
     onUploadComplete: (file: File, url: string, geometry: any) => void;
 }
 
-const ACCEPTED_FORMATS = ['.stl', '.step', '.stp', '.iges', '.igs'];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
 export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState<string>('');
-    const [progress, setProgress] = useState(0);
-
-    const handleDrag = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
-    const handleDragIn = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    }, []);
-
-    const handleDragOut = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    }, []);
-
-    const validateFile = (file: File): string | null => {
-        const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-
-        if (!ACCEPTED_FORMATS.includes(extension)) {
-            return `Format non supporté. Formats acceptés: ${ACCEPTED_FORMATS.join(', ')}`;
-        }
-
-        if (file.size > MAX_FILE_SIZE) {
-            return `Fichier trop volumineux. Taille maximale: 50MB`;
-        }
-
-        return null;
-    };
-
-    const uploadToSupabase = async (file: File): Promise<string> => {
-        const supabase = createClient();
-
-        // Generate unique filename
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(7);
-        const extension = file.name.split('.').pop();
-        const fileName = `${timestamp}-${randomString}.${extension}`;
-
-        const { data, error } = await supabase.storage
-            .from('cad-files')
-            .upload(fileName, file, {
-                cacheControl: '3600',
-                upsert: false
-            });
-
-        if (error) {
-            throw new Error(`Erreur upload: ${error.message}`);
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-            .from('cad-files')
-            .getPublicUrl(fileName);
-
-        return publicUrl;
-    };
-
-    const parseGeometry = async (file: File): Promise<any> => {
-        // Simplified geometry parsing - in production, use proper CAD parser
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target?.result as string;
-
-                // Basic geometry data extraction
-                const geometryData = {
-                    volume: 0,
-                    surface_area: 0,
-                    bounding_box: {
-                        x: 0, y: 0, z: 0
-                    },
-                    complexity: 'medium',
-                    estimated_weight: 0
-                };
-
-                resolve(geometryData);
-            };
-            reader.readAsText(file);
-        });
-    };
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [cacheStatus, setCacheStatus] = useState<'checking' | 'hit' | 'miss' | null>(null);
 
     const handleFile = async (file: File) => {
-        setError('');
-
-        // Validate
-        const validationError = validateFile(file);
-        if (validationError) {
-            setError(validationError);
+        if (!file.name.match(/\.(stl|STL)$/)) {
+            alert('Seuls les fichiers STL sont supportés');
             return;
         }
 
         setIsUploading(true);
-        setProgress(0);
+        setUploadProgress(0);
+        setCacheStatus('checking');
 
         try {
-            // Upload to Supabase Storage
-            setProgress(20);
-            const fileUrl = await uploadToSupabase(file);
+            const cache = getGeometryCache();
 
-            setProgress(60);
+            // Calculate file hash
+            const fileHash = await cache.hashFile(file);
+            setUploadProgress(20);
 
-            // Parse geometry
-            const geometryData = await parseGeometry(file);
+            // Check cache
+            const cached = await cache.get(fileHash);
+            setUploadProgress(40);
 
-            setProgress(100);
+            if (cached) {
+                // Cache HIT - instant load!
+                setCacheStatus('hit');
+                setUploadProgress(100);
 
-            // Notify parent component
-            setTimeout(() => {
-                onUploadComplete(file, fileUrl, geometryData);
-            }, 500);
+                // Create object URL for display
+                const url = URL.createObjectURL(file);
 
-        } catch (err: any) {
-            setError(err.message || 'Erreur lors de l\'upload du fichier');
+                // Return cached data
+                setTimeout(() => {
+                    onUploadComplete(file, url, {
+                        ...cached.geometry,
+                        analysis: cached.analysis,
+                        fromCache: true
+                    });
+                    setIsUploading(false);
+                }, 300); // Small delay for UX
+            } else {
+                // Cache MISS - normal flow
+                setCacheStatus('miss');
+                const url = URL.createObjectURL(file);
+
+                setUploadProgress(100);
+                setTimeout(() => {
+                    onUploadComplete(file, url, { fileHash }); // Pass hash for later caching
+                    setIsUploading(false);
+                }, 300);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
             setIsUploading(false);
-            setProgress(0);
+            setCacheStatus(null);
         }
     };
 
-    const handleDrop = useCallback((e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        e.stopPropagation();
         setIsDragging(false);
 
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    }, []);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+    };
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            handleFile(files[0]);
-        }
+        const file = e.target.files?.[0];
+        if (file) handleFile(file);
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                    <FileType className="w-8 h-8 text-blue-600" />
-                </div>
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
+            <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                    Uploadez votre fichier CAD
+                    Upload Fichier CAD
                 </h2>
                 <p className="text-slate-600">
-                    Formats supportés: STL, STEP, IGES (max 50MB)
+                    Formats supportés: STL
                 </p>
             </div>
 
-            {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-800">{error}</p>
+            {/* Cache Status Indicator */}
+            {cacheStatus && (
+                <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${cacheStatus === 'hit'
+                        ? 'bg-green-50 border border-green-200'
+                        : cacheStatus === 'miss'
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'bg-slate-50 border border-slate-200'
+                    }`}>
+                    {cacheStatus === 'hit' && (
+                        <>
+                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-sm font-medium text-green-900">
+                                ⚡ Chargement instantané depuis le cache
+                            </span>
+                        </>
+                    )}
+                    {cacheStatus === 'miss' && (
+                        <>
+                            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                            <span className="text-sm font-medium text-blue-900">
+                                Nouveau fichier - sera mis en cache
+                            </span>
+                        </>
+                    )}
+                    {cacheStatus === 'checking' && (
+                        <>
+                            <div className="w-3 h-3 bg-slate-400 rounded-full animate-pulse" />
+                            <span className="text-sm font-medium text-slate-700">
+                                Vérification du cache...
+                            </span>
+                        </>
+                    )}
                 </div>
             )}
 
             <div
-                className={`
-          relative border-2 border-dashed rounded-xl p-12 transition-all
-          ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50'}
-          ${isUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/50'}
-        `}
-                onDragEnter={handleDragIn}
-                onDragLeave={handleDragOut}
-                onDragOver={handleDrag}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
+                className={`
+                    relative border-2 border-dashed rounded-xl p-12 text-center transition-all
+                    ${isDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50'
+                    }
+                    ${isUploading ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                `}
             >
                 <input
                     type="file"
-                    id="file-upload"
-                    className="hidden"
-                    accept={ACCEPTED_FORMATS.join(',')}
+                    accept=".stl"
                     onChange={handleFileInput}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     disabled={isUploading}
                 />
 
-                <label htmlFor="file-upload" className="cursor-pointer">
-                    <div className="flex flex-col items-center">
-                        {isUploading ? (
-                            <>
-                                <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-                                <p className="text-lg font-medium text-slate-900 mb-2">
-                                    Upload en cours... {progress}%
-                                </p>
-                                <div className="w-64 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Upload className="w-10 h-10 text-blue-600" />
+                    </div>
+
+                    {isUploading ? (
+                        <>
+                            <div className="w-full max-w-xs">
+                                <div className="flex justify-between text-sm text-slate-600 mb-2">
+                                    <span>Traitement...</span>
+                                    <span>{uploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2">
                                     <div
-                                        className="h-full bg-blue-600 transition-all duration-300"
-                                        style={{ width: `${progress}%` }}
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
                                     />
                                 </div>
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="w-12 h-12 text-slate-400 mb-4" />
-                                <p className="text-lg font-medium text-slate-900 mb-2">
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <p className="text-lg font-semibold text-slate-900 mb-1">
                                     Glissez votre fichier ici
                                 </p>
-                                <p className="text-sm text-slate-500 mb-4">ou</p>
-                                <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                                    Parcourir les fichiers
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </label>
+                                <p className="text-sm text-slate-600">
+                                    ou cliquez pour parcourir
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <FileUp className="w-4 h-4" />
+                                <span>STL • Max 50MB</span>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
-            {/* Supported formats info */}
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {ACCEPTED_FORMATS.map((format) => (
-                    <div
-                        key={format}
-                        className="px-3 py-2 bg-slate-100 rounded-lg text-center text-sm font-medium text-slate-700"
-                    >
-                        {format.toUpperCase()}
-                    </div>
-                ))}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
+                    <strong>💡 Astuce :</strong> Les fichiers déjà uploadés sont mis en cache pour un rechargement instantané la prochaine fois !
+                </p>
             </div>
         </div>
     );
