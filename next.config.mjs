@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Triggering redeploy
 const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
