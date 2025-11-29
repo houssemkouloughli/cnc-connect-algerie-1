@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,9 @@ import { UserPlus, Mail, Lock, User, Phone, Building2, AlertCircle, CheckCircle2
 
 export default function SignupPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const roleParam = searchParams.get('role');
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -22,7 +25,7 @@ export default function SignupPage() {
         fullName: '',
         phone: '',
         wilayaCode: '',
-        accountType: 'client' as 'client' | 'partner',
+        accountType: (roleParam === 'partner' ? 'partner' : 'client') as 'client' | 'partner',
         companyName: '',
     });
     const [loading, setLoading] = useState(false);

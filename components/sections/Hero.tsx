@@ -16,9 +16,14 @@ export default function Hero() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                    <Link href="/devis" className="w-full sm:w-auto">
+                    <Link href="/signup?role=client" className="w-full sm:w-auto">
                         <Button size="lg" className="w-full sm:w-auto bg-white text-[#005f9e] hover:bg-blue-50 hover:text-blue-700 border-none font-bold text-lg h-14 px-8 shadow-lg hover:shadow-xl transition-all">
-                            Obtenir un devis instantané <ArrowRight className="ml-2 w-5 h-5" />
+                            Je cherche des pièces <ArrowRight className="ml-2 w-5 h-5" />
+                        </Button>
+                    </Link>
+                    <Link href="/signup?role=partner" className="w-full sm:w-auto">
+                        <Button size="lg" variant="outline" className="w-full sm:w-auto bg-blue-600/10 text-white border-2 border-white/20 hover:bg-white/20 hover:border-white font-bold text-lg h-14 px-8 backdrop-blur-sm transition-all">
+                            Je suis un Atelier <ShieldCheck className="ml-2 w-5 h-5" />
                         </Button>
                     </Link>
                 </div>
