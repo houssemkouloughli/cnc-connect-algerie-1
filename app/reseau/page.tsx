@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Search, Filter, Map as MapIcon, List } from 'lucide-react';
 import { getApprovedPartners, type Partner } from '@/lib/queries/network';
 import { EmptyState } from '@/components/ui/EmptyState';
+import WilayaSelector from '@/components/ui/WilayaSelector';
 
 import PartnerMap from '@/components/network/PartnerMap';
 
@@ -65,23 +66,12 @@ export default function NetworkPage() {
                                 className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
-                        <select
+                        <WilayaSelector
                             value={selectedWilaya}
-                            onChange={(e) => setSelectedWilaya(e.target.value)}
-                            className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        >
-                            <option value="">Toutes les Wilayas</option>
-                            <option value="16">16 - Alger</option>
-                            <option value="31">31 - Oran</option>
-                            <option value="25">25 - Constantine</option>
-                            <option value="15">15 - Tizi Ouzou</option>
-                            <option value="06">06 - Béjaïa</option>
-                            <option value="19">19 - Sétif</option>
-                            <option value="13">13 - Tlemcen</option>
-                            <option value="09">09 - Blida</option>
-                            <option value="23">23 - Annaba</option>
-                            <option value="30">30 - Ouargla</option>
-                        </select>
+                            onChange={setSelectedWilaya}
+                            placeholder="Toutes les Wilayas"
+                            className="w-full md:w-64 bg-white"
+                        />
                     </div>
 
                     <div className="flex bg-slate-100 p-1 rounded-lg">
