@@ -5,8 +5,22 @@ import { useRouter } from 'next/navigation';
 import { Upload, FileUp, Package, Settings, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import CADUploader from './components/CADUploader';
-import Viewer3D from './components/Viewer3D';
+import dynamic from 'next/dynamic';
+import CADUploader from './components/CADUploader';
 import QuoteForm from './components/QuoteForm';
+
+// Lazy load Viewer3D (heavy component with Three.js)
+const Viewer3D = dynamic(() => import('./components/Viewer3D'), {
+    loading: () => (
+        <div className="bg-white rounded-2xl shadow-xl p-12 flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-slate-600">Chargement du moteur 3D...</p>
+            </div>
+        </div>
+    ),
+    ssr: false
+});
 
 type Step = 1 | 2 | 3;
 

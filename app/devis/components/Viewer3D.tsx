@@ -267,7 +267,7 @@ export default function Viewer3D({
                     <div className="relative bg-slate-50 rounded-xl overflow-hidden border-2 border-slate-200">
                         <div
                             ref={containerRef}
-                            className="w-full aspect-video"
+                            className="w-full aspect-video touch-none"
                             style={{ minHeight: '500px' }}
                         />
 

@@ -73,7 +73,7 @@ export default function QuoteList({ quotes }: QuoteListProps) {
                                 </Badge>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                                 <div className="flex items-center gap-2 text-slate-700">
                                     <Layers className="w-4 h-4 text-slate-400" />
                                     <span className="capitalize">{quote.material.replace('-', ' ')}</span>

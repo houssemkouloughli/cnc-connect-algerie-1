@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CNC Connect Algérie
 
-## Getting Started
+![Version](https://img.shields.io/badge/Version-1.0.0-blue)
+![Next.js](https://img.shields.io/badge/Next.js-14.2.15-black)
+![Supabase](https://img.shields.io/badge/Supabase-Enabled-green)
 
-First, run the development server:
+**CNC Connect Algérie** est une plateforme B2B connectant les clients industriels avec des ateliers CNC en Algérie. 
 
+🚀 **[Voir la démo en ligne](https://cnc-connect-algerie-1.vercel.app)**
+
+---
+
+## ✨ Fonctionnalités Principales
+
+- **Upload & Visualisation 3D** : Téléchargez vos fichiers STL et visualisez-les en 3D avec Three.js
+- **Analyse Géométrique Avancée** : Calcul automatique du volume, surface, complexité et fabricabilité (DFM)
+- **Devis Instantané** : Recevez des estimations de prix basées sur l'analyse de votre modèle 3D
+- **Dashboard Temps Réel** : Suivez vos devis, commandes et statistiques
+- **Performance Optimisée** : Web Workers, Lazy Loading, Cache IndexedDB pour un chargement ultra-rapide
+
+---
+
+## 🛠️ Technologies
+
+- **Frontend** : Next.js 14.2 (App Router), TypeScript, Tailwind CSS
+- **Backend** : Supabase (PostgreSQL, Auth, Storage, RLS)
+- **3D Engine** : Three.js avec Web Workers
+- **Hosting** : Vercel
+
+---
+
+## 🚀 Installation
+
+### Prérequis
+- Node.js 18+ et npm
+- Compte Supabase (gratuit)
+
+### Étapes
+
+1. **Cloner le repository**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/votre-username/cnc-connect-algerie.git
+cd cnc-connect-algerie
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Installer les dépendances**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Configurer les variables d'environnement**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Créez `.env.local` :
+```env
+NEXT_PUBLIC_SUPABASE_URL=votre_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_supabase_anon_key
+```
 
-## Learn More
+4. **Exécuter les migrations Supabase**
 
-To learn more about Next.js, take a look at the following resources:
+Sur Supabase Dashboard → SQL Editor :
+- Exécutez `supabase/migrations/001_initial_schema.sql`
+- Exécutez `supabase/migrations/002_rls_and_storage.sql`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. **Lancer l'application**
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Ouvrez [http://localhost:3000](http://localhost:3000)
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📜 Scripts Disponibles
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev          # Serveur de développement
+npm run build        # Build de production
+npm start            # Serveur de production
+npm run lint         # Linter ESLint
+```
+
+---
+
+## 📚 Documentation
+
+- **[Guide de Contribution](./CONTRIBUTING.md)** : Standards de code, PR process
+- **[Architecture](./ARCHITECTURE.md)** : Diagrammes, patterns, best practices
+
+---
+
+## 🏗️ Structure du Projet
+
+```
+├── app/              # Pages & Routes (Next.js App Router)
+├── components/       # Composants réutilisables
+├── lib/              # Logique métier (3D, Supabase, utils)
+├── supabase/         # Migrations SQL
+└── public/           # Assets statiques
+```
+
+---
+
+## 🚢 Déploiement
+
+### Sur Vercel (Recommandé)
+
+1. Connectez votre repository GitHub à Vercel
+2. Configurez les variables d'environnement dans Vercel Dashboard
+3. Déployez automatiquement à chaque push sur `main`
+
+**Production** : [https://cnc-connect-algerie-1.vercel.app](https://cnc-connect-algerie-1.vercel.app)
+
+---
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! Consultez [CONTRIBUTING.md](./CONTRIBUTING.md) pour  commencer.
+
+---
+
+## 📞 Support
+
+- **Email** : support@cncconnect.dz
+- **Téléphone** : 0555 55 55 55
+
+---
+
+**Développé avec ❤️ en Algérie**
+
