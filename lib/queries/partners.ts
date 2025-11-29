@@ -66,3 +66,128 @@ export async function getPartnerById(id: string) {
         phone: data.profiles?.phone
     };
 }
+
+// ===== MARKETPLACE FUNCTIONS =====
+
+export interface Bid {
+    id: string;
+    quote_id: string;
+    partner_id: string;
+    price: number;
+    lead_time_days: number;
+    message: string | null;
+    status: 'pending' | 'accepted' | 'rejected' | 'negotiating';
+    created_at: string;
+    updated_at: string;
+    quote?: {
+        part_name: string;
+        material: string;
+        quantity: number;
+        status: string;
+    };
+}
+
+export interface QuoteWithClient {
+    id: string;
+    client_id: string;
+    part_name: string;
+    material: string;
+    quantity: number;
+    target_price: number | null;
+    status: 'open' | 'closed' | 'awarded';
+    created_at: string;
+    client: {
+        full_name: string | null;
+        company_name: string | null;
+        wilaya_code: string | null;
+    };
+    bids?: Bid[];
+}
+
+export async function getOpenQuotes(): Promise<QuoteWithClient[]> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+        .from('quotes')
+        .select(`
+            *,
+            client:profiles!client_id(full_name, company_name, wilaya_code),
+            bids(id, partner_id, price, lead_time_days, status, created_at)
+        `)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as QuoteWithClient[];
+}
+
+export async function getPartnerBids(partnerId: string): Promise<Bid[]> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+        .from('bids')
+        .select(`
+            *,
+            quote:quotes(part_name, material, quantity, status)
+        `)
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Bid[];
+}
+
+export async function submitBid(bidData: {
+    quote_id: string;
+    partner_id: string;
+    price: number;
+    lead_time_days: number;
+    message?: string;
+}): Promise<void> {
+    const supabase = createClient();
+
+    const { error } = await supabase
+        .from('bids')
+        .insert({ ...bidData, status: 'pending' });
+
+    if (error) throw error;
+}
+
+export async function getPartnerByProfileId(profileId: string) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('profile_id', profileId)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+export async function getPartnerStats(partnerId: string) {
+    const supabase = createClient();
+
+    const { data: bids } = await supabase
+        .from('bids')
+        .select('price, status')
+        .eq('partner_id', partnerId);
+
+    if (!bids) return { totalBids: 0, acceptedBids: 0, totalRevenue: 0, acceptanceRate: 0 };
+
+    const totalBids = bids.length;
+    const acceptedBids = bids.filter(b => b.status === 'accepted').length;
+    const totalRevenue = bids
+        .filter(b => b.status === 'accepted')
+        .reduce((sum, b) => sum + (b.price || 0), 0);
+    const acceptanceRate = totalBids > 0 ? (acceptedBids / totalBids) * 100 : 0;
+
+    return {
+        totalBids,
+        acceptedBids,
+        totalRevenue,
+        acceptanceRate: Math.round(acceptanceRate)
+    };
+}
+
