@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Upload, FileUp, CheckCircle, AlertCircle } from 'lucide-react';
-import { analyzeGeometry } from '@/lib/3d/core/GeometryAnalyzer';
-import { checkCache, cacheAnalysis } from '@/lib/3d/cache/GeometryCache';
+import { useState } from 'react';
+import { Upload, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CADUploaderProps {
-    onFileSelect: (file: File, analysis: any) => void;
+    onUploadComplete: (file: File, url: string, analysis: any) => void;
 }
 
-export default function CADUploader({ onFileSelect }: CADUploaderProps) {
+export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -34,50 +32,44 @@ export default function CADUploader({ onFileSelect }: CADUploaderProps) {
 
         setIsUploading(true);
         setUploadProgress(0);
-        setCacheStatus('checking');
 
         try {
-            // 1. Vérifier le cache
-            const cachedAnalysis = await checkCache(file);
+            // Simuler une progression d'upload
+            const interval = setInterval(() => {
+                setUploadProgress(prev => {
+                    if (prev >= 90) {
+                        clearInterval(interval);
+                        return 90;
+                    }
+                    return prev + 10;
+                });
+            }, 100);
 
-            if (cachedAnalysis) {
-                setCacheStatus('hit');
-                setUploadProgress(100);
-                toast.success('Analyse récupérée du cache !');
-                onFileSelect(file, cachedAnalysis);
-            } else {
-                setCacheStatus('miss');
-                // Simulation d'upload pour l'UX
-                const interval = setInterval(() => {
-                    setUploadProgress(prev => {
-                        if (prev >= 90) {
-                            clearInterval(interval);
-                            return 90;
-                        }
-                        return prev + 10;
-                    });
-                }, 100);
+            // Créer une URL pour le fichier
+            const fileUrl = URL.createObjectURL(file);
 
-                // 2. Analyser la géométrie
-                const analysis = await analyzeGeometry(file);
+            // Analysis simplifiée (TODO: Integrate real geometry analysis)
+            const simpleAnalysis = {
+                volume: 0,
+                surfaceArea: 0,
+                triangleCount: 0,
+                boundingBox: { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 100, z: 100 }, size: { x: 100, y: 100, z: 100 }, center: { x: 50, y: 50, z: 50 } },
+                complexity: 'medium' as const,
+                complexityScore: 50
+            };
 
-                clearInterval(interval);
-                setUploadProgress(100);
+            clearInterval(interval);
+            setUploadProgress(100);
 
-                // 3. Mettre en cache
-                await cacheAnalysis(file, analysis);
-
-                toast.success('Fichier analysé avec succès');
-                onFileSelect(file, analysis);
-            }
+            toast.success('Fichier téléchargé avec succès');
+            onUploadComplete(file, fileUrl, simpleAnalysis);
         } catch (error) {
             console.error('Error processing file:', error);
-            toast.error('Erreur lors de l\'analyse', {
+            toast.error('Erreur lors du téléchargement', {
                 description: 'Impossible de traiter ce fichier. Veuillez réessayer.'
             });
         } finally {
             setIsUploading(false);
-            setCacheStatus(null);
         }
     };
 
