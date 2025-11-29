@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/client';
-import { notifyNewBid } from '@/lib/notifications/send';
 
 export type Partner = {
     id: string;
@@ -180,8 +179,9 @@ export async function submitBid(bidData: {
         .eq('id', bidData.partner_id)
         .single();
 
-    // Envoyer notification au client
-    if (quote && partner) {
+    // TODO: Move notification to Server Action or API route
+    // Notifications should be sent from server-side code, not client
+    /* if (quote && partner) {
         await notifyNewBid({
             clientId: quote.client.id,
             clientEmail: quote.client.email,
@@ -191,7 +191,7 @@ export async function submitBid(bidData: {
             bidAmount: bidData.price,
             quoteId: bidData.quote_id,
         });
-    }
+    } */
 }
 
 export async function getPartnerByProfileId(profileId: string) {

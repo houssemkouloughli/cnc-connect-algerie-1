@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Upload, FileUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { analyzeGeometry } from '@/lib/3d/core/GeometryAnalyzer';
-import { checkCache, cacheAnalysis } from '@/lib/3d/core/AnalysisCache';
+import { checkCache, cacheAnalysis } from '@/lib/3d/cache/GeometryCache';
 import { toast } from 'sonner';
 
 interface CADUploaderProps {

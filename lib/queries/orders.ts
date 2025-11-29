@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/client';
-import { notifyOrderStatusChange } from '@/lib/notifications/send';
 
 
 export type OrderStatus = 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
@@ -135,8 +134,9 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
         throw error;
     }
 
-    // Notify client of status change (only for meaningful status changes)
-    if (['confirmed', 'in_production', 'shipped', 'delivered'].includes(newStatus)) {
+    // TODO: Move notification to Server Action or API route
+    // Notifications should be sent from server-side code, not client
+    /* if (['confirmed', 'in_production', 'shipped', 'delivered'].includes(newStatus)) {
         const orderDetails = await getOrderDetails(orderId);
         if (orderDetails && orderDetails.client && orderDetails.quote) {
             await notifyOrderStatusChange({
@@ -148,7 +148,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                 orderId,
             });
         }
-    }
+    } */
 }
 
 /**
