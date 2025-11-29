@@ -29,33 +29,31 @@ function ClientDashboardContent() {
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
 
+    const loadData = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            router.push('/login');
+            return;
+        }
+
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        setProfile(profileData);
+
+        // Load quotes
+        const quotesData = await getClientQuotes();
+        setQuotes(quotesData);
+
+        setLoading(false);
+    };
+
     useEffect(() => {
-        const loadData = async () => {
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-
-            setProfile(profileData);
-
-            // Load quotes
-            const quotesData = await getClientQuotes();
-            setQuotes(quotesData);
-
-            setLoading(false);
-        };
-
-        loadData();
-
         loadData();
 
         // Check for success message
@@ -98,15 +96,19 @@ function ClientDashboardContent() {
                                 Bienvenue, {profile.full_name || profile.email}
                             </p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex gap-4">
                             <Link href="/devis">
-                                <Button>
-                                    <Plus className="w-4 h-4 mr-2" />
+                                <Button className="flex items-center gap-2">
+                                    <Plus className="w-4 h-4" />
                                     Nouveau Devis
                                 </Button>
                             </Link>
-                            <Button variant="outline" onClick={signOut}>
-                                <LogOut className="w-4 h-4 mr-2" />
+                            <Button
+                                variant="outline"
+                                onClick={() => signOut()}
+                                className="flex items-center gap-2"
+                            >
+                                <LogOut className="w-4 h-4" />
                                 Déconnexion
                             </Button>
                         </div>
@@ -150,7 +152,7 @@ function ClientDashboardContent() {
                 </div>
 
                 {/* Quote List */}
-                <QuoteList quotes={quotes} />
+                <QuoteList quotes={quotes} onQuoteUpdate={loadData} />
             </div>
         </div>
     );
