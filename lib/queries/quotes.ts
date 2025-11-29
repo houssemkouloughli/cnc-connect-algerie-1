@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
+import { notifyBidAccepted } from '@/lib/notifications/send';
+
 
 export type Quote = {
     id: string;
@@ -72,15 +74,25 @@ export async function acceptBid(quoteId: string, bidId: string) {
     if (quoteError) throw quoteError;
 
     // 4. Create Order
-    // Fetch bid details first
+    // Fetch bid and quote details
     const { data: bid } = await supabase
         .from('bids')
-        .select('partner_id, price')
+        .select(`
+            partner_id, 
+            price,
+            partner:partners!inner(profile_id, company_name, profiles!inner(email))
+        `)
         .eq('id', bidId)
         .single();
 
+    const { data: quote } = await supabase
+        .from('quotes')
+        .select('part_name')
+        .eq('id', quoteId)
+        .single();
+
     if (bid) {
-        const { error: orderError } = await supabase
+        const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert({
                 quote_id: quoteId,
@@ -89,9 +101,24 @@ export async function acceptBid(quoteId: string, bidId: string) {
                 client_id: user.id,
                 total_amount: bid.price,
                 status: 'pending'
-            });
+            })
+            .select()
+            .single();
 
-        if (orderError) console.error('Error creating order:', orderError);
+        if (orderError) {
+            console.error('Error creating order:', orderError);
+        } else if (order && bid.partner && quote) {
+            // Notify partner that their bid was accepted
+            await notifyBidAccepted({
+                partnerId: bid.partner.profile_id,
+                partnerEmail: bid.partner.profiles.email,
+                partnerName: bid.partner.company_name,
+                partName: quote.part_name,
+                clientName: user.email, // We would need to fetch this properly
+                orderAmount: bid.price,
+                orderId: order.id,
+            });
+        }
     }
 }
 

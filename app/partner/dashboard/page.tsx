@@ -11,15 +11,18 @@ import {
     type QuoteWithClient,
     type Bid
 } from '@/lib/queries/partners';
-import { TrendingUp, FileText, CheckCircle, Clock } from 'lucide-react';
+import { getPartnerOrders, type Order } from '@/lib/queries/orders';
+import { TrendingUp, FileText, CheckCircle, Clock, Package } from 'lucide-react';
 import QuoteMarketplace from './components/QuoteMarketplace';
 import MyBids from './components/MyBids';
+import PartnerOrders from './components/PartnerOrders';
 
 export default function PartnerDashboardPage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'marketplace' | 'mybids'>('marketplace');
+    const [activeTab, setActiveTab] = useState<'marketplace' | 'mybids' | 'orders'>('marketplace');
     const [openQuotes, setOpenQuotes] = useState<QuoteWithClient[]>([]);
     const [myBids, setMyBids] = useState<Bid[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [stats, setStats] = useState({ totalBids: 0, acceptedBids: 0, totalRevenue: 0, acceptanceRate: 0 });
     const [loading, setLoading] = useState(true);
     const [partnerId, setPartnerId] = useState<string | null>(null);
@@ -49,14 +52,16 @@ export default function PartnerDashboardPage() {
             setPartnerId(partner.id);
 
             // Charger toutes les données en parallèle
-            const [quotes, bids, partnerStats] = await Promise.all([
+            const [quotes, bids, partnerOrders, partnerStats] = await Promise.all([
                 getOpenQuotes(),
                 getPartnerBids(partner.id),
+                getPartnerOrders(partner.id),
                 getPartnerStats(partner.id)
             ]);
 
             setOpenQuotes(quotes);
             setMyBids(bids);
+            setOrders(partnerOrders);
             setStats(partnerStats);
         } catch (error) {
             console.error('Error loading data:', error);
@@ -126,8 +131,8 @@ export default function PartnerDashboardPage() {
                 <button
                     onClick={() => setActiveTab('marketplace')}
                     className={`px-4 py-3 font-medium transition-colors border-b-2 ${activeTab === 'marketplace'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-slate-600 hover:text-slate-900'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
                         }`}
                 >
                     Marketplace ({openQuotes.length})
@@ -135,11 +140,21 @@ export default function PartnerDashboardPage() {
                 <button
                     onClick={() => setActiveTab('mybids')}
                     className={`px-4 py-3 font-medium transition-colors border-b-2 ${activeTab === 'mybids'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-slate-600 hover:text-slate-900'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
                         }`}
                 >
                     Mes Offres ({myBids.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('orders')}
+                    className={`px-4 py-3 font-medium transition-colors border-b-2 ${activeTab === 'orders'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
+                        }`}
+                >
+                    <Package className="w-4 h-4 inline-block mr-2" />
+                    Commandes ({orders.length})
                 </button>
             </div>
 
@@ -150,8 +165,10 @@ export default function PartnerDashboardPage() {
                     partnerId={partnerId}
                     onBidSubmitted={loadData}
                 />
-            ) : (
+            ) : activeTab === 'mybids' ? (
                 <MyBids bids={myBids} />
+            ) : (
+                <PartnerOrders orders={orders} onOrderUpdated={loadData} />
             )}
         </div>
     );

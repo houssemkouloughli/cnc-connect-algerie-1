@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { notifyNewBid } from '@/lib/notifications/send';
 
 export type Partner = {
     id: string;
@@ -146,11 +147,51 @@ export async function submitBid(bidData: {
 }): Promise<void> {
     const supabase = createClient();
 
-    const { error } = await supabase
+    // Insérer l'offre
+    const { data: newBid, error } = await supabase
         .from('bids')
-        .insert({ ...bidData, status: 'pending' });
+        .insert({
+            quote_id: bidData.quote_id,
+            partner_id: bidData.partner_id,
+            price: bidData.price,
+            lead_time_days: bidData.lead_time_days,
+            message: bidData.message,
+            status: 'pending'
+        })
+        .select()
+        .single();
 
     if (error) throw error;
+
+    // Récupérer les informations du quote et du client pour la notification
+    const { data: quote } = await supabase
+        .from('quotes')
+        .select(`
+            *,
+            client:profiles!client_id(id, email, full_name)
+        `)
+        .eq('id', bidData.quote_id)
+        .single();
+
+    // Récupérer les informations du partenaire
+    const { data: partner } = await supabase
+        .from('partners')
+        .select('company_name')
+        .eq('id', bidData.partner_id)
+        .single();
+
+    // Envoyer notification au client
+    if (quote && partner) {
+        await notifyNewBid({
+            clientId: quote.client.id,
+            clientEmail: quote.client.email,
+            clientName: quote.client.full_name || quote.client.email,
+            partName: quote.part_name,
+            partnerName: partner.company_name,
+            bidAmount: bidData.price,
+            quoteId: bidData.quote_id,
+        });
+    }
 }
 
 export async function getPartnerByProfileId(profileId: string) {
@@ -190,4 +231,3 @@ export async function getPartnerStats(partnerId: string) {
         acceptanceRate: Math.round(acceptanceRate)
     };
 }
-
