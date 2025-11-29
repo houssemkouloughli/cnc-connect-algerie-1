@@ -6,7 +6,6 @@ import { Upload, FileUp, Package, Settings, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import CADUploader from './components/CADUploader';
 import dynamic from 'next/dynamic';
-import CADUploader from './components/CADUploader';
 import QuoteForm from './components/QuoteForm';
 
 // Lazy load Viewer3D (heavy component with Three.js)
