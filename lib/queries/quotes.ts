@@ -41,8 +41,7 @@ export async function createQuote(quoteData: Omit<Quote, 'id' | 'created_at' | '
     return data;
 }
 
-return data;
-}
+
 
 export async function acceptBid(quoteId: string, bidId: string) {
     const supabase = createClient();
