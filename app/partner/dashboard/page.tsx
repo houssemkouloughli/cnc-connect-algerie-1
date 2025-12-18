@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     getOpenQuotes,
-    getPartnerBids,
     getPartnerByProfileId,
     getPartnerStats,
-    type QuoteWithClient,
-    type Bid
+    type QuoteWithClient
 } from '@/lib/queries/partners';
+import { getPartnerBids, type BidWithQuote } from '@/lib/queries/bids';
 import { getPartnerOrders, type Order } from '@/lib/queries/orders';
 import { TrendingUp, FileText, CheckCircle, Clock, Package } from 'lucide-react';
 import QuoteMarketplace from './components/QuoteMarketplace';
@@ -21,7 +20,7 @@ export default function PartnerDashboardPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'marketplace' | 'mybids' | 'orders'>('marketplace');
     const [openQuotes, setOpenQuotes] = useState<QuoteWithClient[]>([]);
-    const [myBids, setMyBids] = useState<Bid[]>([]);
+    const [myBids, setMyBids] = useState<BidWithQuote[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
     const [stats, setStats] = useState({ totalBids: 0, acceptedBids: 0, totalRevenue: 0, acceptanceRate: 0 });
     const [loading, setLoading] = useState(true);
@@ -33,38 +32,69 @@ export default function PartnerDashboardPage() {
 
     const loadData = async () => {
         try {
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
+            const bypassAuthValue = process.env.NEXT_PUBLIC_BYPASS_AUTH;
+            console.log('[loadData] BYPASS_AUTH value:', bypassAuthValue, 'type:', typeof bypassAuthValue);
+            const isDevMode = bypassAuthValue === 'true';
+            console.log('[loadData] isDevMode:', isDevMode);
 
-            if (!user) {
-                router.push('/login?redirect=/partner/dashboard');
-                return;
+            if (!isDevMode) {
+                // Production: Check auth
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (!user) {
+                    router.push('/login?redirect=/partner/dashboard');
+                    return;
+                }
+
+                // Get partner from database
+                const partner = await getPartnerByProfileId(user.id);
+                if (!partner) {
+                    console.error('No partner found for user');
+                    setLoading(false);
+                    return;
+                }
+
+                const partnerId = partner.id;
+                setPartnerId(partnerId);
+
+                // Load all data
+                const [quotes, bids, partnerOrders, partnerStats] = await Promise.all([
+                    getOpenQuotes(),
+                    getPartnerBids(),
+                    getPartnerOrders(partnerId),
+                    getPartnerStats(partnerId)
+                ]);
+
+                setOpenQuotes(quotes);
+                setMyBids(bids);
+                setOrders(partnerOrders);
+                setStats(partnerStats);
+            } else {
+                // DEV MODE: Skip all auth checks
+                console.log('[loadData] DEV MODE: Loading data without auth...');
+                setPartnerId(null);
+
+                try {
+                    console.log('[loadData] Calling getOpenQuotes...');
+                    const quotes = await getOpenQuotes();
+                    console.log('[loadData] Got', quotes.length, 'quotes');
+
+                    console.log('[loadData] Calling getPartnerBids...');
+                    const bids = await getPartnerBids();
+                    console.log('[loadData] Got', bids.length, 'bids');
+
+                    setOpenQuotes(quotes);
+                    setMyBids(bids);
+                    setOrders([]);
+                    setStats({ totalBids: bids.length, acceptedBids: 0, totalRevenue: 0, acceptanceRate: 0 });
+                    console.log('[loadData] State updated successfully!');
+                } catch (innerError) {
+                    console.error('[loadData] Error in dev mode:', innerError);
+                }
             }
-
-            // Récupérer l'ID du partner depuis la table partners
-            const partner = await getPartnerByProfileId(user.id);
-            if (!partner) {
-                console.error('No partner found for user');
-                setLoading(false);
-                return;
-            }
-
-            setPartnerId(partner.id);
-
-            // Charger toutes les données en parallèle
-            const [quotes, bids, partnerOrders, partnerStats] = await Promise.all([
-                getOpenQuotes(),
-                getPartnerBids(partner.id),
-                getPartnerOrders(partner.id),
-                getPartnerStats(partner.id)
-            ]);
-
-            setOpenQuotes(quotes);
-            setMyBids(bids);
-            setOrders(partnerOrders);
-            setStats(partnerStats);
         } catch (error) {
-            console.error('Error loading data:', error);
+            console.error('[loadData] Error loading data:', error);
         } finally {
             setLoading(false);
         }

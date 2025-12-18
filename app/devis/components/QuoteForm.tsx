@@ -1,16 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Loader2, DollarSign } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Send, Loader2, Info } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { createQuote } from '@/lib/queries/quotes';
 import { useRouter } from 'next/navigation';
-import { PriceEstimator } from '@/lib/pricing/PriceEstimator';
 import { useToast } from '@/components/ui/Toast';
 import { getUserFriendlyError } from '@/lib/errors/handleError';
-import type { GeometryAnalysis } from '@/lib/3d/core/types';
-import type { DFMAnalysisResult } from '@/lib/3d/analysis/types';
-import type { PriceEstimate } from '@/lib/pricing/types';
 
 interface QuoteFormProps {
     fileUrl: string;
@@ -47,7 +43,6 @@ export default function QuoteForm({
     const router = useRouter();
     const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
 
     const [formData, setFormData] = useState({
         part_name: fileName.replace(/\.[^/.]+$/, ''), // Remove extension
@@ -58,31 +53,8 @@ export default function QuoteForm({
         notes: ''
     });
 
-    // Calculate price estimate when form data changes
-    useEffect(() => {
-        if (geometryData?.analysis) {
-            try {
-                const estimate = PriceEstimator.estimate(
-                    geometryData.analysis as GeometryAnalysis,
-                    geometryData.dfmAnalysis as DFMAnalysisResult | null,
-                    {
-                        material: formData.material,
-                        finish: formData.finish,
-                        quantity: formData.quantity,
-                        tolerance: 'standard',
-                        urgency: 'standard'
-                    }
-                );
-                setPriceEstimate(estimate);
-            } catch (err) {
-                console.error('Price calculation error:', err);
-            }
-        }
-    }, [formData.material, formData.finish, formData.quantity, geometryData]);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
         setIsSubmitting(true);
 
         try {
@@ -98,8 +70,7 @@ export default function QuoteForm({
 
             await createQuote(quoteData);
 
-            // Redirect to client dashboard with success message
-            showToast('Devis créé avec succès !', 'success');
+            showToast('Demande de devis envoyée avec succès ! Les partenaires vont vous proposer leurs offres.', 'success');
             router.push('/client?success=true');
 
         } catch (err: any) {
@@ -121,14 +92,12 @@ export default function QuoteForm({
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                    Configuration du Devis
+                    Demande de Devis
                 </h2>
                 <p className="text-slate-600">
-                    Définissez les paramètres de fabrication pour votre pièce
+                    Remplissez les informations ci-dessous pour recevoir des propositions de nos partenaires
                 </p>
             </div>
-
-
 
             <div className="space-y-6">
                 {/* Part Name */}
@@ -205,7 +174,7 @@ export default function QuoteForm({
 
                     <div>
                         <label className="block text-sm font-medium text-slate-900 mb-2">
-                            Prix Cible (DZD) - Optionnel
+                            Budget Cible (DZD) - Optionnel
                         </label>
                         <input
                             type="number"
@@ -220,106 +189,36 @@ export default function QuoteForm({
                     </div>
                 </div>
 
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-1">Prix Estimé</h3>
-                            <p className="text-blue-100 text-sm">
-                                Estimation automatique basée sur la géométrie
-                            </p>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-3xl font-bold">
-                                {priceEstimate.totalQuantity.total.toLocaleString('fr-DZ')} DZD
-                            </div>
-                            <div className="text-blue-100 text-sm">
-                                {priceEstimate.perUnit.total.toLocaleString('fr-DZ')} DZD / pièce
-                            </div>
-                        </div>
-                    </div>
+                {/* Notes */}
+                <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">
+                        Notes Additionnelles (Optionnel)
+                    </label>
+                    <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900"
+                        placeholder="Spécifications techniques, délais souhaités, etc."
+                    />
                 </div>
 
-                {/* Breakdown */}
-                <div className="bg-white p-6">
-                    <h4 className="font-semibold text-slate-900 mb-4">Détail du Prix</h4>
-                    <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Matériau</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.material.toLocaleString('fr-DZ')} DZD
-                            </span>
+                {/* Info Box */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-blue-900">
+                            <p className="font-semibold mb-1">Comment ça marche ?</p>
+                            <ul className="space-y-1 text-blue-800">
+                                <li>• Votre demande sera visible par nos partenaires qualifiés</li>
+                                <li>• Vous recevrez plusieurs propositions sous 24-48h</li>
+                                <li>• Comparez et choisissez la meilleure offre</li>
+                            </ul>
                         </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Usinage</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.machining.toLocaleString('fr-DZ')} DZD
-                            </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Setup (une fois)</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.setup.toLocaleString('fr-DZ')} DZD
-                            </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Finition</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.finishing.toLocaleString('fr-DZ')} DZD
-                            </span>
-                        </div>
-                        <div className="border-t border-slate-200 pt-3 flex justify-between text-sm">
-                            <span className="text-slate-600">Sous-total</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.subtotal.toLocaleString('fr-DZ')} DZD
-                            </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Marge (25%)</span>
-                            <span className="font-medium text-slate-900">
-                                {priceEstimate.totalQuantity.margin.toLocaleString('fr-DZ')} DZD
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Lead Time */}
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-blue-900">Délai estimé</span>
-                            <span className="text-sm font-semibold text-blue-900">
-                                {priceEstimate.leadTime.min}-{priceEstimate.leadTime.max} jours
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Notes */}
-                    {priceEstimate.notes.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                            {priceEstimate.notes.map((note, idx) => (
-                                <div key={idx} className="text-xs text-slate-600 flex items-start gap-2">
-                                    <span className="text-blue-600">•</span>
-                                    <span>{note}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Confidence Badge */}
-                    <div className="mt-4 flex items-center gap-2">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${priceEstimate.confidence === 'high' ? 'bg-green-100 text-green-800' :
-                            priceEstimate.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-orange-100 text-orange-800'
-                            }`}>
-                            Confiance: {
-                                priceEstimate.confidence === 'high' ? 'Élevée' :
-                                    priceEstimate.confidence === 'medium' ? 'Moyenne' :
-                                        'Faible'
-                            }
-                        </span>
                     </div>
                 </div>
             </div>
-            )}
 
             {/* Action Buttons */}
             <div className="mt-8 flex justify-between">
@@ -335,7 +234,7 @@ export default function QuoteForm({
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                     {isSubmitting ? (
                         <>
@@ -344,8 +243,8 @@ export default function QuoteForm({
                         </>
                     ) : (
                         <>
-                            <Save className="w-5 h-5" />
-                            Soumettre le Devis
+                            <Send className="w-5 h-5" />
+                            Envoyer la Demande
                         </>
                     )}
                 </button>

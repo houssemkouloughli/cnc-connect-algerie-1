@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { Quote, acceptBid } from '@/lib/queries/quotes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { FileText, Calendar, Package, Layers, ChevronDown, ChevronUp, CheckCircle, Star, Clock } from 'lucide-react';
+import { FileText, Calendar, Package, Layers, ChevronDown, ChevronUp, CheckCircle, Star, Clock, Download, MessageCircle } from 'lucide-react';
+import { downloadQuotePDF } from '@/lib/pdf/generate-quote';
+import MessagingPanel from '@/components/dashboard/MessagingPanel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { getUserFriendlyError } from '@/lib/errors/handleError';
@@ -30,6 +32,11 @@ export default function QuoteList({ quotes, onQuoteUpdate }: QuoteListProps) {
     const { showToast } = useToast();
     const [expandedQuoteId, setExpandedQuoteId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const [messagingData, setMessagingData] = useState<{
+        quoteId: string;
+        receiverId: string;
+        receiverName: string;
+    } | null>(null);
 
     const toggleExpand = (id: string) => {
         setExpandedQuoteId(expandedQuoteId === id ? null : id);
@@ -68,155 +75,210 @@ export default function QuoteList({ quotes, onQuoteUpdate }: QuoteListProps) {
     }
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Mes Devis</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {quotes.map((quote) => {
-                        // @ts-ignore - bids is added in the query but not in the base type yet
-                        const bids = quote.bids || [];
-                        const bidCount = bids.length;
-                        const isExpanded = expandedQuoteId === quote.id;
+        <>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Mes Devis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {quotes.map((quote) => {
+                            // @ts-ignore - bids is added in the query but not in the base type yet
+                            const bids = quote.bids || [];
+                            const bidCount = bids.length;
+                            const isExpanded = expandedQuoteId === quote.id;
 
-                        return (
-                            <div
-                                key={quote.id}
-                                className={`border rounded-lg transition-all ${isExpanded ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-blue-300'
-                                    }`}
-                            >
+                            return (
                                 <div
-                                    className="p-4 cursor-pointer"
-                                    onClick={() => toggleExpand(quote.id)}
+                                    key={quote.id}
+                                    className={`border rounded-lg transition-all ${isExpanded ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-blue-300'
+                                        }`}
                                 >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-semibold text-slate-900">
-                                                    {quote.part_name}
-                                                </h4>
-                                                {bidCount > 0 && (
-                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                                                        {bidCount} offre{bidCount > 1 ? 's' : ''}
-                                                    </span>
-                                                )}
+                                    <div
+                                        className="p-4 cursor-pointer"
+                                        onClick={() => toggleExpand(quote.id)}
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-semibold text-slate-900">
+                                                        {quote.part_name}
+                                                    </h4>
+                                                    {bidCount > 0 && (
+                                                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                                                            {bidCount} offre{bidCount > 1 ? 's' : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
+                                                    <Calendar className="w-4 h-4" />
+                                                    {new Date(quote.created_at).toLocaleDateString('fr-FR', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric'
+                                                    })}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
-                                                <Calendar className="w-4 h-4" />
-                                                {new Date(quote.created_at).toLocaleDateString('fr-FR', {
-                                                    day: 'numeric',
-                                                    month: 'long',
-                                                    year: 'numeric'
-                                                })}
+                                            <div className="flex items-center gap-3">
+                                                <Badge className={statusColors[quote.status]}>
+                                                    {statusLabels[quote.status]}
+                                                </Badge>
+                                                {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <Badge className={statusColors[quote.status]}>
-                                                {statusLabels[quote.status]}
-                                            </Badge>
-                                            {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                                            <div className="flex items-center gap-2 text-slate-700">
+                                                <Layers className="w-4 h-4 text-slate-400" />
+                                                <span className="capitalize">{quote.material.replace('-', ' ')}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-slate-700">
+                                                <Package className="w-4 h-4 text-slate-400" />
+                                                <span>{quote.quantity} pièce(s)</span>
+                                            </div>
+                                            {quote.target_price && (
+                                                <div className="text-slate-700">
+                                                    <span className="font-medium">{quote.target_price.toLocaleString('fr-FR')} DZD</span> (Cible)
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                            <Layers className="w-4 h-4 text-slate-400" />
-                                            <span className="capitalize">{quote.material.replace('-', ' ')}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                            <Package className="w-4 h-4 text-slate-400" />
-                                            <span>{quote.quantity} pièce(s)</span>
-                                        </div>
-                                        {quote.target_price && (
-                                            <div className="text-slate-700">
-                                                <span className="font-medium">{quote.target_price.toLocaleString('fr-FR')} DZD</span> (Cible)
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                                    {/* Bids Section */}
+                                    {isExpanded && (
+                                        <div className="border-t border-slate-200 p-4 bg-slate-50 rounded-b-lg">
+                                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                                                Offres reçues
+                                                <span className="text-xs font-normal text-slate-500">({bidCount})</span>
+                                            </h5>
 
-                                {/* Bids Section */}
-                                {isExpanded && (
-                                    <div className="border-t border-slate-200 p-4 bg-slate-50 rounded-b-lg">
-                                        <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                                            Offres reçues
-                                            <span className="text-xs font-normal text-slate-500">({bidCount})</span>
-                                        </h5>
-
-                                        {bidCount === 0 ? (
-                                            <p className="text-sm text-slate-500 italic">Aucune offre pour le moment. Revenez plus tard !</p>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {bids.map((bid: any) => (
-                                                    <div key={bid.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                                                        <div className="flex flex-col sm:flex-row justify-between gap-4">
-                                                            <div>
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="font-semibold text-slate-900">{bid.partner?.company_name}</span>
-                                                                    <div className="flex items-center text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">
-                                                                        <Star className="w-3 h-3 fill-yellow-400 mr-0.5" />
-                                                                        {bid.partner?.rating}
+                                            {bidCount === 0 ? (
+                                                <p className="text-sm text-slate-500 italic">Aucune offre pour le moment. Revenez plus tard !</p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {bids.map((bid: any) => (
+                                                        <div key={bid.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                                            <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <span className="font-semibold text-slate-900">{bid.partner?.company_name || 'Partenaire CNC'}</span>
+                                                                        <div className="flex items-center text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">
+                                                                            <Star className="w-3 h-3 fill-yellow-400 mr-0.5" />
+                                                                            {bid.partner?.rating || '4.5'}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-4 text-sm text-slate-600">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Clock className="w-4 h-4" />
+                                                                            {bid.delivery_days || bid.lead_time_days || 7} jours
+                                                                        </div>
+                                                                        {(bid.proposal_text || bid.message) && (
+                                                                            <span className="text-slate-500 italic truncate max-w-[200px]">
+                                                                                "{bid.proposal_text || bid.message}"
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-4 text-sm text-slate-600">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <Clock className="w-4 h-4" />
-                                                                        {bid.lead_time_days} jours
+
+                                                                <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[200px]">
+                                                                    <div className="text-right">
+                                                                        <div className="text-lg font-bold text-blue-600">
+                                                                            {bid.price.toLocaleString('fr-DZ')} DZD
+                                                                        </div>
+                                                                        <div className="text-xs text-slate-500">Total TTC</div>
                                                                     </div>
-                                                                    {bid.message && (
-                                                                        <span className="text-slate-500 italic truncate max-w-[200px]">
-                                                                            "{bid.message}"
-                                                                        </span>
+
+                                                                    {quote.status === 'open' && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleAcceptBid(quote.id, bid.id);
+                                                                            }}
+                                                                            disabled={isProcessing === bid.id}
+                                                                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                                                        >
+                                                                            {isProcessing === bid.id ? (
+                                                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                            ) : (
+                                                                                <CheckCircle className="w-4 h-4" />
+                                                                            )}
+                                                                            Accepter
+                                                                        </button>
+                                                                    )}
+
+                                                                    {bid.status === 'accepted' && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full flex items-center gap-1">
+                                                                                <CheckCircle className="w-4 h-4" />
+                                                                                Acceptée
+                                                                            </span>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    downloadQuotePDF({
+                                                                                        quoteId: quote.id,
+                                                                                        quoteName: quote.part_name,
+                                                                                        clientName: 'Client',
+                                                                                        clientEmail: '',
+                                                                                        partName: quote.part_name,
+                                                                                        material: quote.material,
+                                                                                        finish: quote.finish || 'Standard',
+                                                                                        quantity: quote.quantity,
+                                                                                        bidAmount: bid.price || bid.amount || 0,
+                                                                                        deliveryDays: bid.lead_time_days || bid.delivery_days || 7,
+                                                                                        partnerName: bid.partner?.company_name || 'Partenaire',
+                                                                                        partnerWilaya: bid.partner?.wilaya_code || '16',
+                                                                                        createdAt: new Date(quote.created_at),
+                                                                                    });
+                                                                                }}
+                                                                                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                                                title="Télécharger le devis PDF"
+                                                                            >
+                                                                                <Download className="w-4 h-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setMessagingData({
+                                                                                        quoteId: quote.id,
+                                                                                        receiverId: bid.partner_id,
+                                                                                        receiverName: bid.partner?.company_name || 'Partenaire'
+                                                                                    });
+                                                                                }}
+                                                                                className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                                                                title="Envoyer un message"
+                                                                            >
+                                                                                <MessageCircle className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             </div>
-
-                                                            <div className="flex items-center justify-between sm:justify-end gap-4 min-w-[200px]">
-                                                                <div className="text-right">
-                                                                    <div className="text-lg font-bold text-blue-600">
-                                                                        {bid.price.toLocaleString('fr-DZ')} DZD
-                                                                    </div>
-                                                                    <div className="text-xs text-slate-500">Total TTC</div>
-                                                                </div>
-
-                                                                {quote.status === 'open' && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleAcceptBid(quote.id, bid.id);
-                                                                        }}
-                                                                        disabled={isProcessing === bid.id}
-                                                                        className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                                                                    >
-                                                                        {isProcessing === bid.id ? (
-                                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                                        ) : (
-                                                                            <CheckCircle className="w-4 h-4" />
-                                                                        )}
-                                                                        Accepter
-                                                                    </button>
-                                                                )}
-
-                                                                {bid.status === 'accepted' && (
-                                                                    <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full flex items-center gap-1">
-                                                                        <CheckCircle className="w-4 h-4" />
-                                                                        Acceptée
-                                                                    </span>
-                                                                )}
-                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            </CardContent>
-        </Card>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Messaging Panel */}
+            {
+                messagingData && (
+                    <MessagingPanel
+                        quoteId={messagingData.quoteId}
+                        receiverId={messagingData.receiverId}
+                        receiverName={messagingData.receiverName}
+                        isOpen={!!messagingData}
+                        onClose={() => setMessagingData(null)}
+                    />
+                )
+            }
+        </>
     );
 }

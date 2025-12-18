@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getOrderDetails, confirmOrder, cancelOrder, type Order } from '@/lib/queries/orders';
+import { getOrderPayment, type Payment } from '@/lib/queries/payments';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import OrderTimeline from '@/components/orders/OrderTimeline';
+import PaymentStatus from '@/components/orders/PaymentStatus';
+import ShippingTracker from '@/components/orders/ShippingTracker';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { getUserFriendlyError } from '@/lib/errors/handleError';
@@ -19,6 +22,7 @@ export default function OrderDetailsPage() {
     const { showToast } = useToast();
 
     const [order, setOrder] = useState<Order | null>(null);
+    const [payment, setPayment] = useState<Payment | null>(null);
     const [loading, setLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -36,8 +40,15 @@ export default function OrderDetailsPage() {
         }
 
         try {
-            const data = await getOrderDetails(orderId);
-            setOrder(data);
+            // Load order details
+            const orderData = await getOrderDetails(orderId);
+            setOrder(orderData);
+
+            // Load payment info if exists
+            if (orderData) {
+                const paymentData = await getOrderPayment(orderId);
+                setPayment(paymentData);
+            }
         } catch (error) {
             console.error('Error loading order:', error);
             showToast('Erreur lors du chargement de la commande', 'error');
@@ -97,6 +108,8 @@ export default function OrderDetailsPage() {
         );
     }
 
+    const showShipping = ['shipped', 'in_transit', 'delivered'].includes(order.status || '');
+
     return (
         <div className="min-h-screen bg-slate-50 pb-12">
             {/* Header */}
@@ -131,6 +144,20 @@ export default function OrderDetailsPage() {
                 <div className="bg-white rounded-xl border border-slate-200 p-8 mb-6">
                     <h2 className="text-lg font-semibold text-slate-900 mb-6">Suivi de commande</h2>
                     <OrderTimeline currentStatus={order.status} />
+
+                    {/* Shipping Tracker Integration */}
+                    {showShipping && (
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                            <ShippingTracker
+                                orderId={order.id}
+                                shippingStatus={order.shipping_status || 'shipped'}
+                                trackingNumber={order.tracking_number}
+                                fromWilaya={order.partner?.wilaya_code}
+                                // Default to Alger (16) if client wilaya unknown for now
+                                toWilaya="16"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -200,8 +227,50 @@ export default function OrderDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Informations partenaire */}
+                    {/* Informations partenaire et Actions */}
                     <div className="space-y-6">
+
+                        {/* Actions & Paiement */}
+                        <div className="space-y-6">
+                            {/* Payment Status Component */}
+                            <PaymentStatus
+                                orderId={order.id}
+                                amount={order.total_amount}
+                                existingPayment={payment}
+                                onPaymentSubmitted={() => checkAuthAndLoadOrder()}
+                            />
+
+                            <div className="bg-white rounded-xl border border-slate-200 p-6">
+                                <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
+                                <div className="space-y-3">
+                                    {order.status === 'pending' && (
+                                        <>
+                                            <Button
+                                                onClick={handleConfirmOrder}
+                                                disabled={isProcessing}
+                                                className="w-full"
+                                            >
+                                                {isProcessing ? 'Traitement...' : 'Confirmer la commande'}
+                                            </Button>
+                                            <Button
+                                                onClick={handleCancelOrder}
+                                                disabled={isProcessing}
+                                                variant="outline"
+                                                className="w-full"
+                                            >
+                                                Annuler la commande
+                                            </Button>
+                                        </>
+                                    )}
+                                    {order.status === 'delivered' && (
+                                        <Button variant="outline" className="w-full">
+                                            Télécharger la facture
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="bg-white rounded-xl border border-slate-200 p-6">
                             <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                                 <Building className="w-5 h-5" />
@@ -223,37 +292,6 @@ export default function OrderDetailsPage() {
                                     </div>
                                 </div>
                             )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="bg-white rounded-xl border border-slate-200 p-6">
-                            <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions</h2>
-                            <div className="space-y-3">
-                                {order.status === 'pending' && (
-                                    <>
-                                        <Button
-                                            onClick={handleConfirmOrder}
-                                            disabled={isProcessing}
-                                            className="w-full"
-                                        >
-                                            {isProcessing ? 'Traitement...' : 'Confirmer la commande'}
-                                        </Button>
-                                        <Button
-                                            onClick={handleCancelOrder}
-                                            disabled={isProcessing}
-                                            variant="outline"
-                                            className="w-full"
-                                        >
-                                            Annuler la commande
-                                        </Button>
-                                    </>
-                                )}
-                                {order.status === 'delivered' && (
-                                    <Button variant="outline" className="w-full">
-                                        Télécharger la facture
-                                    </Button>
-                                )}
-                            </div>
                         </div>
                     </div>
                 </div>

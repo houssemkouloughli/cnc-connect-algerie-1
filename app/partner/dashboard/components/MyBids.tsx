@@ -1,12 +1,12 @@
 'use client';
 
 import { Calendar, Clock } from 'lucide-react';
-import type { Bid } from '@/lib/queries/partners';
+import type { BidWithQuote } from '@/lib/queries/bids';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FileText } from 'lucide-react';
 
 interface MyBidsProps {
-    bids: Bid[];
+    bids: BidWithQuote[];
 }
 
 const statusColors: Record<string, string> = {
@@ -44,7 +44,7 @@ export default function MyBids({ bids }: MyBidsProps) {
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                             <h3 className="text-lg font-bold text-slate-900 mb-1">
-                                {bid.quote?.part_name || 'Devis supprimé'}
+                                {bid.quotes?.part_name || 'Devis supprimé'}
                             </h3>
                             <div className="flex items-center gap-4 text-sm text-slate-600">
                                 <div className="flex items-center gap-1">
@@ -55,7 +55,7 @@ export default function MyBids({ bids }: MyBidsProps) {
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Clock className="w-4 h-4" />
-                                    <span>{bid.lead_time_days} jours</span>
+                                    <span>{bid.delivery_days} jours</span>
                                 </div>
                             </div>
                         </div>
@@ -69,18 +69,18 @@ export default function MyBids({ bids }: MyBidsProps) {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                        {bid.quote && (
+                        {bid.quotes && (
                             <>
                                 <div className="bg-slate-50 rounded-lg p-3">
                                     <p className="text-xs text-slate-600 mb-1">Matériau</p>
                                     <p className="font-semibold text-slate-900 capitalize">
-                                        {bid.quote.material.replace('-', ' ')}
+                                        {bid.quotes.material.replace('-', ' ')}
                                     </p>
                                 </div>
                                 <div className="bg-slate-50 rounded-lg p-3">
                                     <p className="text-xs text-slate-600 mb-1">Quantité</p>
                                     <p className="font-semibold text-slate-900">
-                                        {bid.quote.quantity} pièce{bid.quote.quantity > 1 ? 's' : ''}
+                                        {bid.quotes.quantity} pièce{bid.quotes.quantity > 1 ? 's' : ''}
                                     </p>
                                 </div>
                             </>
@@ -88,15 +88,15 @@ export default function MyBids({ bids }: MyBidsProps) {
                         <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                             <p className="text-xs text-blue-600 mb-1">Votre Prix</p>
                             <p className="font-bold text-blue-900">
-                                {bid.price.toLocaleString('fr-DZ')} DZD
+                                {bid.amount.toLocaleString('fr-DZ')} DZD
                             </p>
                         </div>
                     </div>
 
-                    {bid.message && (
+                    {bid.proposal_text && (
                         <div className="bg-slate-50 rounded-lg p-4 border-l-4 border-blue-500">
                             <p className="text-xs font-medium text-slate-600 mb-1">Votre Message</p>
-                            <p className="text-sm text-slate-700">{bid.message}</p>
+                            <p className="text-sm text-slate-700">{bid.proposal_text}</p>
                         </div>
                     )}
 

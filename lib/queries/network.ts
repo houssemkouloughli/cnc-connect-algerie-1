@@ -35,5 +35,5 @@ export async function getApprovedPartners(): Promise<Partner[]> {
         .order('rating', { ascending: false });
 
     if (error) throw error;
-    return data as Partner[];
+    return data as unknown as Partner[];
 }

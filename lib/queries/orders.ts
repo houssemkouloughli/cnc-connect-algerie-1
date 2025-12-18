@@ -13,6 +13,8 @@ export type Order = {
     total_amount: number;
     created_at: string;
     updated_at: string;
+    shipping_status?: 'preparing' | 'shipped' | 'in_transit' | 'delivered' | 'failed';
+    tracking_number?: string;
     // Relations
     quote?: {
         part_name: string;

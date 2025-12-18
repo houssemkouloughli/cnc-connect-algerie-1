@@ -152,8 +152,12 @@ export async function getClientQuotes() {
     return data as Quote[];
 }
 
-export async function getOpenQuotesForPartners() {
-    const supabase = createClient();
+export async function getOpenQuotesForPartners(limit = 50, offset = 0) {
+    // DEV MODE FIX: Use a raw client to avoid mock-auth token interference
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const { createClient: createRawClient } = require('@supabase/supabase-js');
+    const supabase = createRawClient(supabaseUrl, supabaseKey);
 
     // RLS will handle the filtering for partners, but we add status check explicitly
     const { data, error } = await supabase
@@ -166,7 +170,8 @@ export async function getOpenQuotesForPartners() {
       )
     `)
         .eq('status', 'open')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
     if (error) {
         console.error('Error fetching open quotes:', error);

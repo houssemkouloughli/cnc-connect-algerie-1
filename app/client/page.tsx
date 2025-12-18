@@ -30,6 +30,58 @@ function ClientDashboardContent() {
     const { showToast } = useToast();
 
     const loadData = async () => {
+        const isDevMode = process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true';
+
+        if (isDevMode) {
+            // DEV MODE: Use mock profile
+            console.log('[Client Dashboard] DEV MODE: Bypassing auth');
+            setProfile({
+                id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                email: 'dev@test.com',
+                full_name: 'Client Test',
+                role: 'client'
+            });
+
+            // Load quotes with raw client
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+            const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+            const { createClient: createRawClient } = require('@supabase/supabase-js');
+            const supabase = createRawClient(supabaseUrl, supabaseKey);
+
+            try {
+                const { data: quotesData, error } = await supabase
+                    .from('quotes')
+                    .select(`
+                        *,
+                        bids!quote_id(
+                            id, 
+                            partner_id, 
+                            amount, 
+                            delivery_days, 
+                            status, 
+                            created_at, 
+                            proposal_text,
+                            partner:profiles!partner_id(company_name, rating)
+                        )
+                    `)
+                    .eq('status', 'open')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('[Client Dashboard] Error loading quotes:', error);
+                } else {
+                    console.log('[Client Dashboard] Loaded', quotesData?.length || 0, 'quotes');
+                    setQuotes(quotesData || []);
+                }
+            } catch (err) {
+                console.error('[Client Dashboard] Exception:', err);
+            }
+
+            setLoading(false);
+            return;
+        }
+
+        // PRODUCTION MODE
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 

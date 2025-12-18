@@ -2,37 +2,42 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { submitBid } from '@/lib/queries/partners';
+import { submitBid } from '@/lib/queries/bids';
 import { useToast } from '@/components/ui/Toast';
 import { getUserFriendlyError } from '@/lib/errors/handleError';
-import type { QuoteWithClient } from '@/lib/queries/partners';
 
 interface BidModalProps {
-    quote: QuoteWithClient;
-    partnerId: string;
+    quote: {
+        id: string;
+        part_name: string;
+        material: string;
+        finish: string;
+        quantity: number;
+        target_price?: number;
+    };
     onClose: () => void;
-    onSuccess: () => void;
+    onBidSubmitted: () => void;
 }
 
-export default function BidModal({ quote, partnerId, onClose, onSuccess }: BidModalProps) {
-    const [price, setPrice] = useState('');
-    const [leadTimeDays, setLeadTimeDays] = useState('');
-    const [message, setMessage] = useState('');
+export default function BidModal({ quote, onClose, onBidSubmitted }: BidModalProps) {
+    const [amount, setAmount] = useState('');
+    const [deliveryDays, setDeliveryDays] = useState('');
+    const [proposalText, setProposalText] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { showToast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!price || !leadTimeDays) {
+        if (!amount || !deliveryDays) {
             showToast('Veuillez remplir tous les champs requis', 'error');
             return;
         }
 
-        const priceNum = parseFloat(price);
-        const daysNum = parseInt(leadTimeDays);
+        const amountNum = parseFloat(amount);
+        const daysNum = parseInt(deliveryDays);
 
-        if (priceNum <= 0 || daysNum <= 0) {
+        if (amountNum <= 0 || daysNum <= 0) {
             showToast('Le prix et le délai doivent être positifs', 'error');
             return;
         }
@@ -42,14 +47,14 @@ export default function BidModal({ quote, partnerId, onClose, onSuccess }: BidMo
         try {
             await submitBid({
                 quote_id: quote.id,
-                partner_id: partnerId,
-                price: priceNum,
-                lead_time_days: daysNum,
-                message: message || undefined
+                amount: amountNum,
+                delivery_days: daysNum,
+                proposal_text: proposalText || undefined
             });
 
             showToast('Offre soumise avec succès !', 'success');
-            onSuccess();
+            onBidSubmitted();
+            onClose(); // Close the modal after successful submission
         } catch (error) {
             const friendlyError = getUserFriendlyError(error);
             showToast(friendlyError, 'error');
@@ -106,8 +111,8 @@ export default function BidModal({ quote, partnerId, onClose, onSuccess }: BidMo
                             </label>
                             <input
                                 type="number"
-                                value={price}
-                                onChange={(e) => setPrice(e.target.value)}
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
                                 placeholder="Ex: 50000"
                                 min="1"
                                 step="0.01"
@@ -122,8 +127,8 @@ export default function BidModal({ quote, partnerId, onClose, onSuccess }: BidMo
                             </label>
                             <input
                                 type="number"
-                                value={leadTimeDays}
-                                onChange={(e) => setLeadTimeDays(e.target.value)}
+                                value={deliveryDays}
+                                onChange={(e) => setDeliveryDays(e.target.value)}
                                 placeholder="Ex: 7"
                                 min="1"
                                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -136,8 +141,8 @@ export default function BidModal({ quote, partnerId, onClose, onSuccess }: BidMo
                                 Message / Notes (optionnel)
                             </label>
                             <textarea
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                value={proposalText}
+                                onChange={(e) => setProposalText(e.target.value)}
                                 placeholder="Informations complémentaires, certifications, garanties..."
                                 rows={3}
                                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

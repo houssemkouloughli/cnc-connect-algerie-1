@@ -5,6 +5,7 @@ import { Menu, X, Phone, User, LogIn, LogOut, LayoutDashboard, Settings, Chevron
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { signOut } from '@/lib/utils/auth';
+import NotificationCenter from '@/components/shared/NotificationCenter';
 
 interface UserProfile {
     id: string;
@@ -103,63 +104,66 @@ export default function Header() {
                         {loading ? (
                             <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
                         ) : user ? (
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                        {user.full_name?.[0] || user.email[0].toUpperCase()}
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700">
-                                        {user.full_name || 'Mon Compte'}
-                                    </span>
-                                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                                </button>
-
-                                {isUserMenuOpen && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setIsUserMenuOpen(false)}
-                                        />
-                                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-20">
-                                            <div className="px-4 py-3 border-b border-slate-100">
-                                                <p className="text-sm font-medium text-slate-900">{user.full_name || 'Utilisateur'}</p>
-                                                <p className="text-xs text-slate-500">{user.email}</p>
-                                                <div className="mt-1">
-                                                    <span className="inline-block px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                                                        {user.role === 'client' ? 'Client' : user.role === 'partner' ? 'Partenaire' : 'Admin'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <Link
-                                                href={getDashboardUrl()}
-                                                className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                                onClick={() => setIsUserMenuOpen(false)}
-                                            >
-                                                <LayoutDashboard className="w-4 h-4" />
-                                                Tableau de Bord
-                                            </Link>
-                                            <Link
-                                                href="/settings"
-                                                className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                                onClick={() => setIsUserMenuOpen(false)}
-                                            >
-                                                <Settings className="w-4 h-4" />
-                                                Paramètres
-                                            </Link>
-                                            <div className="border-t border-slate-100 my-1"></div>
-                                            <button
-                                                onClick={handleSignOut}
-                                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                            >
-                                                <LogOut className="w-4 h-4" />
-                                                Déconnexion
-                                            </button>
+                            <div className="flex items-center gap-3">
+                                <NotificationCenter />
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                            {user.full_name?.[0] || user.email[0].toUpperCase()}
                                         </div>
-                                    </>
-                                )}
+                                        <span className="text-sm font-medium text-slate-700">
+                                            {user.full_name || 'Mon Compte'}
+                                        </span>
+                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                    </button>
+
+                                    {isUserMenuOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-10"
+                                                onClick={() => setIsUserMenuOpen(false)}
+                                            />
+                                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-20">
+                                                <div className="px-4 py-3 border-b border-slate-100">
+                                                    <p className="text-sm font-medium text-slate-900">{user.full_name || 'Utilisateur'}</p>
+                                                    <p className="text-xs text-slate-500">{user.email}</p>
+                                                    <div className="mt-1">
+                                                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                                            {user.role === 'client' ? 'Client' : user.role === 'partner' ? 'Partenaire' : 'Admin'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Link
+                                                    href={getDashboardUrl()}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                                    onClick={() => setIsUserMenuOpen(false)}
+                                                >
+                                                    <LayoutDashboard className="w-4 h-4" />
+                                                    Tableau de Bord
+                                                </Link>
+                                                <Link
+                                                    href="/settings"
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                                    onClick={() => setIsUserMenuOpen(false)}
+                                                >
+                                                    <Settings className="w-4 h-4" />
+                                                    Paramètres
+                                                </Link>
+                                                <div className="border-t border-slate-100 my-1"></div>
+                                                <button
+                                                    onClick={handleSignOut}
+                                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Déconnexion
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <>

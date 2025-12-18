@@ -48,7 +48,10 @@ export async function middleware(request: NextRequest) {
     const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
 
     // If user is not authenticated and trying to access protected route
-    if (isProtectedRoute && !user) {
+    // BYPASS: If dev mode is enabled, skip this check
+    const isDevBypass = process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true'
+
+    if (isProtectedRoute && !user && !isDevBypass) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 

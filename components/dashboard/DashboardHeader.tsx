@@ -22,7 +22,7 @@ export default function DashboardHeader() {
     };
 
     return (
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 transition-transform duration-300 transform -translate-y-[90%] hover:translate-y-0 shadow-md">
             {/* Search */}
             <div className="w-96">
                 <div className="relative">
@@ -46,7 +46,7 @@ export default function DashboardHeader() {
                         <div className="text-sm font-bold text-slate-900">Meca Précision</div>
                         <div className="text-xs text-slate-500">Admin</div>
                     </div>
-                    
+
                     <button
                         onClick={() => setShowMenu(!showMenu)}
                         className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border border-blue-700 text-white hover:bg-blue-700 transition-colors cursor-pointer"
@@ -60,7 +60,7 @@ export default function DashboardHeader() {
                             <div className="p-3 border-b border-slate-200">
                                 <p className="text-sm font-medium text-slate-900">Menu Admin</p>
                             </div>
-                            
+
                             <Link href="/admin-setup">
                                 <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left">
                                     <Plus className="w-4 h-4" />

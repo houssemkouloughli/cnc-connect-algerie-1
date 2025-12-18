@@ -70,7 +70,8 @@ export class STLWorkerManager {
         fileUrl: string,
         onProgress?: (progress: number) => void
     ): Promise<{ geometry: any; analysis: GeometryAnalysis }> {
-        if (!this.worker) {
+        const worker = this.worker;
+        if (!worker) {
             throw new Error('Worker not initialized');
         }
 
@@ -91,7 +92,7 @@ export class STLWorkerManager {
 
             this.callbacks.set(callbackId, callback);
 
-            this.worker.postMessage({
+            worker.postMessage({
                 type: 'PARSE_STL',
                 fileUrl
             });

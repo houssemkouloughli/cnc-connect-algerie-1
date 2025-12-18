@@ -13,7 +13,7 @@ export type Partner = {
     avatar_url?: string;
 };
 
-export async function getApprovedPartners() {
+export async function getApprovedPartners(limit = 50, offset = 0) {
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -25,7 +25,8 @@ export async function getApprovedPartners() {
       )
     `)
         .eq('status', 'approved')
-        .order('rating', { ascending: false });
+        .order('rating', { ascending: false })
+        .range(offset, offset + limit - 1);
 
     if (error) {
         console.error('Error fetching partners:', error);
@@ -104,18 +105,23 @@ export interface QuoteWithClient {
     bids?: Bid[];
 }
 
-export async function getOpenQuotes(): Promise<QuoteWithClient[]> {
-    const supabase = createClient();
+export async function getOpenQuotes(limit = 50, offset = 0): Promise<QuoteWithClient[]> {
+    // DEV MODE FIX: Use raw client to avoid mock token issues
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const { createClient: createRawClient } = require('@supabase/supabase-js');
+    const supabase = createRawClient(supabaseUrl, supabaseKey);
 
     const { data, error } = await supabase
         .from('quotes')
         .select(`
             *,
             client:profiles!client_id(full_name, company_name, wilaya_code),
-            bids(id, partner_id, price, lead_time_days, status, created_at)
+            bids!quote_id(id, partner_id, amount, delivery_days, status, created_at)
         `)
         .eq('status', 'open')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
     if (error) throw error;
     return data as QuoteWithClient[];

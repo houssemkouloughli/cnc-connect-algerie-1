@@ -1,124 +1,172 @@
 'use client';
 
-import { useState } from 'react';
-import { MapPin, Package, Calendar, TrendingUp } from 'lucide-react';
-import type { QuoteWithClient } from '@/lib/queries/partners';
+import { useState, useEffect } from 'react';
+import { getOpenQuotesForPartners } from '@/lib/queries/quotes';
+import { Search, Filter, Package, Calendar, DollarSign } from 'lucide-react';
+import { formatDistanceToNow } from '@/lib/utils/date';
 import BidModal from './BidModal';
-import { EmptyState } from '@/components/ui/EmptyState';
 
-interface QuoteMarketplaceProps {
-    quotes: QuoteWithClient[];
-    partnerId: string | null;
-    onBidSubmitted: () => void;
+interface Quote {
+    id: string;
+    part_name: string;
+    material: string;
+    finish: string;
+    quantity: number;
+    target_price?: number;
+    created_at: string;
+    geometry_data: any;
+    file_url?: string;
 }
 
-export default function QuoteMarketplace({ quotes, partnerId, onBidSubmitted }: QuoteMarketplaceProps) {
-    const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
+export default function QuoteMarketplace() {
+    const [quotes, setQuotes] = useState<Quote[]>([]);
+    const [filteredQuotes, setFilteredQuotes] = useState<Quote[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [materialFilter, setMaterialFilter] = useState('all');
+    const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
-    if (quotes.length === 0) {
+    useEffect(() => {
+        loadQuotes();
+    }, []);
+
+    useEffect(() => {
+        let filtered = quotes;
+
+        if (searchTerm) {
+            filtered = filtered.filter(q =>
+                q.part_name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        if (materialFilter !== 'all') {
+            filtered = filtered.filter(q => q.material === materialFilter);
+        }
+
+        setFilteredQuotes(filtered);
+    }, [quotes, searchTerm, materialFilter]);
+
+    const loadQuotes = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getOpenQuotesForPartners();
+            setQuotes(data as any);
+            setFilteredQuotes(data as any);
+        } catch (error) {
+            console.error('Error loading quotes:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBidSubmitted = () => {
+        setSelectedQuote(null);
+        loadQuotes();
+    };
+
+    if (isLoading) {
         return (
-            <EmptyState
-                icon={Package}
-                title="Aucun devis ouvert"
-                description="Il n'y a pas de nouveaux devis disponibles pour le moment. Revenez plus tard !"
-            />
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
         );
     }
 
     return (
-        <>
-            <div className="grid gap-4">
-                {quotes.map((quote) => {
-                    const hasMyBid = quote.bids?.some(bid => bid.partner_id === partnerId);
-                    const bidCount = quote.bids?.length || 0;
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Opportunités Disponibles</h2>
+                    <p className="text-slate-600 mt-1">{filteredQuotes.length} demande(s) de devis</p>
+                </div>
+            </div>
 
-                    return (
+            {/* Filters */}
+            <div className="flex gap-4">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Rechercher par nom de pièce..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                </div>
+                <select
+                    value={materialFilter}
+                    onChange={(e) => setMaterialFilter(e.target.value)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="all">Tous les matériaux</option>
+                    <option value="aluminum-6061">Aluminium 6061</option>
+                    <option value="steel-304">Acier Inox 304L</option>
+                    <option value="steel-c45">Acier C45</option>
+                </select>
+            </div>
+
+            {/* Quote Cards */}
+            <div className="grid gap-4">
+                {filteredQuotes.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+                        <Package className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                        <p className="text-slate-600">Aucune opportunité disponible pour le moment</p>
+                    </div>
+                ) : (
+                    filteredQuotes.map((quote) => (
                         <div
                             key={quote.id}
-                            className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:border-blue-300 transition-colors"
+                            className="bg-white border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                         >
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="text-lg font-bold text-slate-900">
-                                            {quote.part_name}
-                                        </h3>
-                                        {hasMyBid && (
-                                            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                Offre soumise
-                                            </span>
+                                    <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                                        {quote.part_name}
+                                    </h3>
+                                    <div className="flex flex-wrap gap-4 text-sm text-slate-600 mb-3">
+                                        <div className="flex items-center gap-1">
+                                            <Package className="w-4 h-4" />
+                                            <span>{quote.quantity} pièce(s)</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium">Matériau:</span>
+                                            <span>{quote.material}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium">Finition:</span>
+                                            <span>{quote.finish}</span>
+                                        </div>
+                                        {quote.target_price && (
+                                            <div className="flex items-center gap-1">
+                                                <DollarSign className="w-4 h-4" />
+                                                <span>Budget: {quote.target_price.toLocaleString()} DZD</span>
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-4 text-sm text-slate-600">
-                                        <div className="flex items-center gap-1">
-                                            <MapPin className="w-4 h-4" />
-                                            <span>{quote.client?.wilaya_code || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="w-4 h-4" />
-                                            <span>
-                                                {new Date(quote.created_at).toLocaleDateString('fr-FR')}
-                                            </span>
-                                        </div>
+                                    <div className="text-xs text-slate-500">
+                                        Publié {formatDistanceToNow(new Date(quote.created_at))}
                                     </div>
                                 </div>
-
-                                {bidCount > 0 && (
-                                    <div className="flex items-center gap-1 text-sm text-slate-600">
-                                        <TrendingUp className="w-4 h-4" />
-                                        <span>{bidCount} offre{bidCount > 1 ? 's' : ''}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                <div className="bg-slate-50 rounded-lg p-3">
-                                    <p className="text-xs text-slate-600 mb-1">Matériau</p>
-                                    <p className="font-semibold text-slate-900 capitalize">
-                                        {quote.material.replace('-', ' ')}
-                                    </p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg p-3">
-                                    <p className="text-xs text-slate-600 mb-1">Quantité</p>
-                                    <p className="font-semibold text-slate-900">
-                                        {quote.quantity} pièce{quote.quantity > 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                                <div className="bg-slate-50 rounded-lg p-3">
-                                    <p className="text-xs text-slate-600 mb-1">Budget Cible</p>
-                                    <p className="font-semibold text-slate-900">
-                                        {quote.target_price
-                                            ? `${quote.target_price.toLocaleString('fr-DZ')} DZD`
-                                            : 'Non spécifié'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end">
                                 <button
                                     onClick={() => setSelectedQuote(quote)}
-                                    disabled={hasMyBid || !partnerId}
-                                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="ml-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                                 >
-                                    {hasMyBid ? 'Offre déjà soumise' : 'Soumettre une Offre'}
+                                    Soumettre une offre
                                 </button>
                             </div>
                         </div>
-                    );
-                })}
+                    ))
+                )}
             </div>
 
-            {selectedQuote && partnerId && (
+            {/* Bid Modal */}
+            {selectedQuote && (
                 <BidModal
                     quote={selectedQuote}
-                    partnerId={partnerId}
                     onClose={() => setSelectedQuote(null)}
-                    onSuccess={() => {
-                        setSelectedQuote(null);
-                        onBidSubmitted();
-                    }}
+                    onBidSubmitted={handleBidSubmitted}
                 />
             )}
-        </>
+        </div>
     );
 }

@@ -15,10 +15,17 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
     const [cacheStatus, setCacheStatus] = useState<'checking' | 'hit' | 'miss' | null>(null);
 
     const handleFile = async (file: File) => {
-        // Validation basique
-        if (!file.name.toLowerCase().endsWith('.stl')) {
+        const fileName = file.name.toLowerCase();
+        const fileExtension = fileName.split('.').pop() || '';
+
+        // Detect file type
+        const is3DFile = ['stl', 'step', 'stp', 'iges', 'igs'].includes(fileExtension);
+        const isImage = ['jpg', 'jpeg', 'png', 'pdf'].includes(fileExtension);
+
+        // Validation
+        if (!is3DFile && !isImage) {
             toast.error('Format non supporté', {
-                description: 'Veuillez uploader un fichier STL.'
+                description: 'Formats acceptés: STL, STEP, IGES ou Images (JPG, PNG, PDF)'
             });
             return;
         }
@@ -34,7 +41,39 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
         setUploadProgress(0);
 
         try {
-            // Simuler une progression d'upload
+            // Image Upload - Route to Design Service
+            if (isImage) {
+                const interval = setInterval(() => {
+                    setUploadProgress(prev => {
+                        if (prev >= 90) {
+                            clearInterval(interval);
+                            return 90;
+                        }
+                        return prev + 10;
+                    });
+                }, 100);
+
+                const fileUrl = URL.createObjectURL(file);
+
+                clearInterval(interval);
+                setUploadProgress(100);
+
+                toast.success('Image téléchargée', {
+                    description: '📐 Nous allons vous contacter pour créer le modèle 3D de votre pièce.'
+                });
+
+                // Flag as needs design
+                const designServiceData = {
+                    fileType: 'image',
+                    needsDesign: true,
+                    analysis: null
+                };
+
+                onUploadComplete(file, fileUrl, designServiceData);
+                return;
+            }
+
+            // 3D File Processing
             const interval = setInterval(() => {
                 setUploadProgress(prev => {
                     if (prev >= 90) {
@@ -45,23 +84,29 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
                 });
             }, 100);
 
-            // Créer une URL pour le fichier
             const fileUrl = URL.createObjectURL(file);
 
-            // Analysis simplifiée (TODO: Integrate real geometry analysis)
+            // TODO: Integrate real STEP/IGES parser (occt-import-js)
+            // For now, simulate analysis for all 3D formats
             const simpleAnalysis = {
                 volume: 0,
                 surfaceArea: 0,
                 triangleCount: 0,
-                boundingBox: { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 100, z: 100 }, size: { x: 100, y: 100, z: 100 }, center: { x: 50, y: 50, z: 50 } },
+                boundingBox: {
+                    min: { x: 0, y: 0, z: 0 },
+                    max: { x: 100, y: 100, z: 100 },
+                    size: { x: 100, y: 100, z: 100 },
+                    center: { x: 50, y: 50, z: 50 }
+                },
                 complexity: 'medium' as const,
-                complexityScore: 50
+                complexityScore: 50,
+                fileType: fileExtension
             };
 
             clearInterval(interval);
             setUploadProgress(100);
 
-            toast.success('Fichier téléchargé avec succès');
+            toast.success(`Fichier ${fileExtension.toUpperCase()} téléchargé avec succès`);
             onUploadComplete(file, fileUrl, simpleAnalysis);
         } catch (error) {
             console.error('Error processing file:', error);
@@ -90,10 +135,11 @@ export default function CADUploader({ onUploadComplete }: CADUploaderProps) {
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                    Upload Fichier CAD
+                    Upload Fichier CAD ou Image
                 </h2>
                 <p className="text-slate-600">
-                    Formats supportés: STL
+                    <span className="font-medium">Fichiers 3D:</span> STL, STEP (.stp), IGES (.igs)<br />
+                    <span className="font-medium">Images/Plans:</span> JPG, PNG, PDF (nous créerons le modèle 3D pour vous)
                 </p>
             </div>
 

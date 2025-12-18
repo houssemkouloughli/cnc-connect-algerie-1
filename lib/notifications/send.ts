@@ -47,7 +47,7 @@ export async function createNotification({
                 message,
                 link,
                 metadata,
-            });
+            } as any);
 
         if (dbError) {
             console.error('Error creating notification in DB:', dbError);
